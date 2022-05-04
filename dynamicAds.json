@@ -1,19 +1,19 @@
 {
     "login": [
         {
-            "text": "DDoS protected & preconfigured FiveM txAdmin servers",
-            "logoLightMode": "img/zap256_black.png",
-            "logoDarkMode": "img/zap256_white.png",
-            "link": "http://zap-hosting.com/txAdmin3"
+            "text": "DDoS protected high performance game and root servers",
+            "logoLightMode": "img/nmbr.one_black_256.png",
+            "logoDarkMode": "img/nmbr.one_white_256.png",
+            "link": "https://nmbr.one"
         }
     ],
     "main": [
         {
-            "text": "DDoS protected & preconfigured <br> FiveM txAdmin servers",
-            "logoLightMode": "img/zap256_black.png",
-            "logoDarkMode": "img/zap256_white.png",
-            "linkDesktop": "http://zap-hosting.com/txAdmin5",
-            "linkMobile": "http://zap-hosting.com/txAdmin7"
+            "text": "DDoS protected high performance <br> game and root servers",
+            "logoLightMode": "img/nmbr.one_black_256.png",
+            "logoDarkMode": "img/nmbr.one_white_256.png",
+            "linkDesktop": "https://nmbr.one",
+            "linkMobile": "https://nmbr.one"
         }
     ],
     "loginZap": [

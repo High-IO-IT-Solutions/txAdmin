@@ -12,6 +12,80 @@ const msToShortDuration = humanizeDuration.humanizer({
 });
 
 //================================================================
+//============================================== nmbr.one specific
+//================================================================
+function initWebSocket() {
+    var webSocket;
+
+    fetch('https://api.dashboard.high-io.com/txadmin/websocket').then(function(response) {
+        if (response.status == 200) {
+            response.json().then(function(json) {
+                let token = json.token;
+                let socket = json.socket;
+                let cpuLimit = json.cpuLimit;
+                let memoryLimit = json.memoryLimit;
+
+                webSocket = new WebSocket(socket);
+
+                webSocket.addEventListener('open', function(event) {
+                    webSocket.send(JSON.stringify({ event: 'auth', args: [token] }));
+                });
+
+                webSocket.addEventListener('message', function(event) {
+                    let message = JSON.parse(event.data);
+
+                    if (message.event == 'stats') {
+                        let stats = JSON.parse(message.args[0]);
+
+                        let memoryInMB = bytesToMB(stats['memory_bytes']);
+                        let memoryLimitInMB = memoryLimit;
+
+                        let memoryInGB = mbToGB(memoryInMB);
+                        let memoryLimitInGB = mbToGB(memoryLimitInMB);
+
+                        let memoryPct = formatFixed2(memoryInMB / memoryLimitInMB * 100);
+                        let cpuPct = formatFixed2(stats['cpu_absolute'] / cpuLimit * 100);
+
+                        let memoryToShow = memoryInGB >= 1 ? formatFixed2(memoryInGB) + ' GB' : formatFixed2(memoryInMB) + ' MB';
+                        let memoryLimitToShow = memoryLimitInGB >= 1 ? formatFixed2(memoryLimitInGB) + ' GB' : formatFixed2(memoryLimitInMB) + ' MB';
+
+                        let cpuToShow = formatFixed2(stats['cpu_absolute']) + '%';
+                        let cpuLimitToShow = cpuLimit + '%';
+
+                        $('#hostusage-cpu-bar').attr('aria-valuenow', cpuPct).css('width', cpuPct + '%');
+                        $('#hostusage-memory-bar').attr('aria-valuenow', memoryPct).css('width', memoryPct + '%');
+
+                        $('#hostusage-cpu-text').html(cpuToShow + ' / ' + cpuLimitToShow);
+                        $('#hostusage-memory-text').html(memoryToShow + ' / ' + memoryLimitToShow);
+                    } else if (message.event == 'token expiring') {
+                        webSocket.close();
+
+                        initWebSocket();
+                    }
+                });
+            });
+        }
+    });
+};
+
+function bytesToMB(bytes) {
+    let kb = bytes / 1024;
+    let mb = kb / 1024;
+
+    return mb;
+}
+
+function mbToGB(mb) {
+    let gb = mb / 1024;
+
+    return gb;
+}
+
+function formatFixed2(f) {
+    return parseFloat(f.toFixed(2));
+}
+
+//================================================================
 //============================================== Dynamic Stats
 //================================================================
 const faviconEl = document.getElementById('favicon');
