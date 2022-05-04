@@ -31,7 +31,7 @@ module.exports = class DynamicAds {
         }
 
         //Update with the ads from the interweebs
-        this.update();
+        //this.update();
 
         //Cron Function
         setInterval(() => {
