@@ -1,0 +1,50 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: node:14.19
+    steps:
+      - checkout
+      - run:
+          name: "Install app dependencies"
+          command: "npm i"
+      - run:
+          name: "Build app"
+          command: "npm run build:txadmin"
+      - run:
+          name: "Create workspace directory"
+          command: "mkdir -p workspace"
+      - run:
+          name: "Move dist to workspace"
+          command: "mv dist workspace/"
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - dist
+  deploy:
+    docker:
+      - image: debian:bullseye
+    steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: "Update package cache"
+          command: "apt update"
+      - run:
+          name: "Install packages"
+          command: "apt -y install zip sshpass"
+      - run:
+          name: "Archive dist"
+          command: "cd workspace && zip -r dist.zip dist/"
+      - run:
+          name: "Upload dist archive"
+          command: "sshpass -p $DEPLOY_TARGET_PASSWORD scp -o StrictHostKeyChecking=no workspace/dist.zip $DEPLOY_TARGET_USER@$DEPLOY_TARGET_HOST:/$CIRCLE_BRANCH.zip"
+
+workflows:
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
