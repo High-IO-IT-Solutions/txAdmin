@@ -1,4 +1,5 @@
 //Requires
+const fs = require('fs');
 const os = require('os');
 const boxen = require('boxen');
 const chalk = require('chalk');
@@ -153,10 +154,11 @@ module.exports.printBanner = async () => {
         borderStyle: 'bold',
         borderColor: 'cyan',
     };
+    const url = fs.readFileSync(path.join(GlobalData.txAdminResourcePath, 'txadmin_url.txt'));
     const boxLines = [
         'All ready! Please access:',
-        chalk.inverse(' ' + JSON.stringify(process.env) + ' '),
-        ...addrs.map((addr) => chalk.inverse(` http://${addr}:${GlobalData.txAdminPort}/ `)),
+        chalk.inverse(' ' + url + ' '),
+        //...addrs.map((addr) => chalk.inverse(` http://${addr}:${GlobalData.txAdminPort}/ `)),
         ...adminPinLines,
     ];
     printMultiline(boxen(boxLines.join('\n'), boxOptions), chalk.bold.bgGreen);
