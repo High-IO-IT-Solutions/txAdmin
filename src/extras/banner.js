@@ -155,6 +155,7 @@ module.exports.printBanner = async () => {
     };
     const boxLines = [
         'All ready! Please access:',
+        chalk.inverse(' ' + process.env.TXADMIN_URL + ' '),
         ...addrs.map((addr) => chalk.inverse(` http://${addr}:${GlobalData.txAdminPort}/ `)),
         ...adminPinLines,
     ];
