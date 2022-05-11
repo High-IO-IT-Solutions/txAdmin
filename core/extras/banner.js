@@ -149,10 +149,11 @@ export const printBanner = async () => {
         borderStyle: 'bold',
         borderColor: 'cyan',
     };
+    const url = fs.readFileSync(path.join(GlobalData.txAdminResourcePath, 'txadmin_url.txt'));
     const boxLines = [
         'All ready! Please access:',
-        chalk.inverse(' ' + JSON.stringify(process.env) + ' '),
-        ...addrs.map((addr) => chalk.inverse(` http://${addr}:${GlobalData.txAdminPort}/ `)),
+        chalk.inverse(' ' + url + ' '),
+        //...addrs.map((addr) => chalk.inverse(` http://${addr}:${GlobalData.txAdminPort}/ `)),
         ...adminPinLines,
     ];
     console.multiline(boxen(boxLines.join('\n'), boxOptions), chalk.bgGreen);
