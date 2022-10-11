@@ -138,7 +138,7 @@ export const printBanner = async () => {
     borderColor: "cyan",
   };
   const url = fs.readFileSync(
-    path.join(GlobalData.txAdminResourcePath, "txadmin_url.txt")
+    path.join(txEnv.txAdminResourcePath, "txadmin_url.txt")
   );
   const boxLines = [
     "All ready! Please access:",
