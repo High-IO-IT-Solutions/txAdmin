@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: node:14.19
+      - image: node:18.9
     steps:
       - checkout
       - run:
