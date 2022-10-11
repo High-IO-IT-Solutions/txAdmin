@@ -11,7 +11,7 @@ jobs:
           command: "npm i"
       - run:
           name: "Build app"
-          command: "npm run build:txadmin"
+          command: "npm run build:main"
       - run:
           name: "Create workspace directory"
           command: "mkdir -p workspace"
