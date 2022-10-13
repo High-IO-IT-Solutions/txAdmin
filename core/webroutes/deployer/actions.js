@@ -147,8 +147,8 @@ async function handleSetVariables(ctx) {
         ].join('\n');
     } else {
         userVars.serverEndpoints = [
-            'endpoint_add_tcp "0.0.0.0:30120"',
-            'endpoint_add_udp "0.0.0.0:30120"',
+            'endpoint_add_tcp "0.0.0.0:' + process.env.SERVER_PORT + '"',
+            'endpoint_add_udp "0.0.0.0:' + process.env.SERVER_PORT + '"',
         ].join('\n');
     }
 

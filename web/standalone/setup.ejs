@@ -427,8 +427,8 @@
             const shortName = (treatedName.length < 3)? 'DumbName' : treatedName;
             const timestamp = Math.round(Date.now()/1000).toString(16).padStart(6, 0).slice(-6).toUpperCase();
             return {
-                id: `${shortName}_${timestamp}`,
-                path: `${txDataPath}/${shortName}_${timestamp}.base`,
+                id: `server`,
+                path: `/home/container/server`,
             };
         }
         const inputKeyUp = (event) => {
