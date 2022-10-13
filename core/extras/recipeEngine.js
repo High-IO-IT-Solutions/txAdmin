@@ -37,7 +37,6 @@ const isPathValid = (pathInput, acceptRoot = true) => {
 const replaceVars = (inputString, deployerCtx) => {
     const allVars = Object.keys(deployerCtx);
     for (const varName of allVars) {
-        console.log("VAR " + varName + " : " + deployerCtx[varName].toString())
         const varNameReplacer = new RegExp(escapeRegExp(`{{${varName}}}`), 'g');
         inputString = inputString.replace(varNameReplacer, deployerCtx[varName].toString());
     }
