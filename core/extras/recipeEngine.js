@@ -248,7 +248,7 @@ const taskMovePath = async (options, basePath, deployerCtx) => {
     const srcPath = safePath(basePath, options.src);
     const destPath = safePath(basePath, options.dest);
     await fse.move(srcPath, destPath, {
-        overwrite: (options.overwrite === 'true' || options.overwrite === true),
+        overwrite: (options.overwrite == undefined ? true : (options.overwrite === 'true' || options.overwrite === true)),
     });
 };
 
