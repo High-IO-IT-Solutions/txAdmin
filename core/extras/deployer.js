@@ -47,10 +47,15 @@ export const engineVersion = 3;
  */
 export const validateTargetPath = async (deployPath) => {
     if (await fse.pathExists(deployPath)) {
-        if (await canCreateFile(deployPath)) {
-            return 'Exists and is writtable!';
+        const pathFiles = await fse.readdir(deployPath);
+        if (pathFiles.some((x) => x !== '.empty')) {
+            throw new Error('This folder is not empty!');
         } else {
-            throw new Error('Path exists, but its not a folder, or its not writtable.');
+            if (await canCreateFile(deployPath)) {
+                return 'Exists, empty, and writtable!';
+            } else {
+                throw new Error('Path exists, but its not a folder, or its not writtable.');
+            }
         }
     } else {
         if (await canCreateFile(deployPath)) {
