@@ -2,6 +2,108 @@
 //================================================================
 //============================================== Dynamic Stats
 //================================================================
+const faviconEl = document.getElementById('favicon');
+const statusCard = {
+    self: document.getElementById('status-card'),
+    discord: document.getElementById('status-discord'),
+    server: document.getElementById('status-server'),
+    serverProcess: document.getElementById('status-serverProcess'),
+    nextRestartTime: document.getElementById('status-nextRestartTime'),
+    nextRestartBtnCancel: document.getElementById('status-nextRestartBtnCancel'),
+    nextRestartBtnEnable: document.getElementById('status-nextRestartBtnEnable'),
+};
+
+const setBadgeColor = (el, color) => {
+    const targetColorClass = `badge-${color}`;
+    if (!el.classList.contains(targetColorClass)) {
+        el.classList.remove('badge-primary', 'badge-secondary', 'badge-success', 'badge-danger', 'badge-warning', 'badge-info', 'badge-light', 'badge-dark');
+        el.classList.add(targetColorClass);
+    }
+};
+const setNextRestartTimeClass = (cssClass) => {
+    const el = statusCard.nextRestartTime;
+    if (!el.classList.contains(cssClass)) {
+        el.classList.remove('font-weight-light', 'text-warning', 'text-muted');
+        el.classList.add(cssClass);
+    }
+};
+const msToTimeString = (ms) => {
+    const hours = Math.floor(ms / 1000 / 60 / 60);
+    const minutes = Math.floor((ms / 1000 / 60 / 60 - hours) * 60);
+
+    let hStr, mStr;
+    if (hours) hStr = (hours === 1) ? `1 hour` : `${hours} hours`;
+    if (minutes) mStr = (minutes === 1) ? `1 minute` : `${minutes} minutes`;
+
+    return [hStr, mStr].filter(x => x).join(', ');
+};
+
+const updateStatusCard = (discordData, serverData) => {
+    if(!statusCard.self) return;
+
+    setBadgeColor(statusCard.discord, discordData.statusClass);
+    statusCard.discord.textContent = discordData.status;
+    setBadgeColor(statusCard.server, serverData.statusClass);
+    statusCard.server.textContent = serverData.status;
+    statusCard.serverProcess.textContent = serverData.process;
+
+    if (typeof serverData.scheduler.nextRelativeMs !== 'number') {
+        setNextRestartTimeClass('font-weight-light');
+        statusCard.nextRestartTime.textContent = 'not scheduled';
+    } else {
+        const tempFlag = (serverData.scheduler.nextIsTemp)? '(tmp)' : '';
+        const relativeTime = msToTimeString(serverData.scheduler.nextRelativeMs);
+        const isLessThanMinute = serverData.scheduler.nextRelativeMs < 60_000;
+        if(isLessThanMinute){
+            statusCard.nextRestartTime.textContent = `right now ${tempFlag}`;
+            statusCard.nextRestartBtnCancel.classList.add('d-none');
+            statusCard.nextRestartBtnEnable.classList.add('d-none');
+        }else{
+            statusCard.nextRestartTime.textContent = `in ${relativeTime} ${tempFlag}`;
+        }
+
+        if (serverData.scheduler.nextSkip) {
+            setNextRestartTimeClass('text-muted');
+            if(!isLessThanMinute) {
+                statusCard.nextRestartBtnCancel.classList.add('d-none');
+                statusCard.nextRestartBtnEnable.classList.remove('d-none');
+            }
+        } else {
+            setNextRestartTimeClass('text-warning');
+            if(!isLessThanMinute) {
+                statusCard.nextRestartBtnCancel.classList.remove('d-none');
+                statusCard.nextRestartBtnEnable.classList.add('d-none');
+            }
+        }
+    }
+};
+
+const updatePageTitle = (serverStatusClass, serverName, playerCount) => {
+    if(!isWebInterface) return;
+    
+    const pageName = PAGE_TITLE || 'txAdmin';
+    document.title = `(${playerCount}) ${serverName} | ${pageName}`;
+
+    let iconType = 'default';
+    if (serverStatusClass === 'success') {
+        iconType = 'online';
+    } else if (serverStatusClass === 'warning') {
+        iconType = 'partial';
+    } else if (serverStatusClass === 'danger') {
+        iconType = 'offline';
+    }
+    faviconEl.href = `img/favicon_${iconType}.png`;
+};
+
+const updateHostStats = (hostData) => {
+    if(!isWebInterface) return;
+    
+    $('#hostusage-cpu-bar').attr('aria-valuenow', hostData.cpu.pct).css('width', hostData.cpu.pct + '%');
+    $('#hostusage-cpu-text').html(hostData.cpu.text);
+    $('#hostusage-memory-bar').attr('aria-valuenow', hostData.memory.pct).css('width', hostData.memory.pct + '%');
+    $('#hostusage-memory-text').html(hostData.memory.text);
+};
+
 function refreshData() {
     const scope = (isWebInterface) ? 'web' : 'iframe';
     txAdminAPI({
@@ -9,18 +111,11 @@ function refreshData() {
         type: 'GET',
         timeout: REQ_TIMEOUT_SHORT,
         success: function (data) {
-            if (data.logout) {
-                window.location = '/auth?logout';
-                return;
-            }
-            $('#status-card').html(data.status);
+            if (checkApiLogoutRefresh(data)) return;
+            updateStatusCard(data.discord, data.server);
             if (isWebInterface) {
-                //$('#hostusage-cpu-bar').attr('aria-valuenow', data.host.cpu.pct).css('width', data.host.cpu.pct + '%');
-                //$('#hostusage-cpu-text').html(data.host.cpu.text);
-                //$('#hostusage-memory-bar').attr('aria-valuenow', data.host.memory.pct).css('width', data.host.memory.pct + '%');
-                //$('#hostusage-memory-text').html(data.host.memory.text);
-                $('#favicon').attr('href', 'img/' + data.meta.favicon + '.png');
-                document.title = data.meta.title;
+                updatePageTitle(data.server.statusClass, data.server.name, data.players.length);
+                updateHostStats(data.host);
                 processPlayers(data.players);
             }
         },
@@ -31,90 +126,28 @@ function refreshData() {
             } else {
                 out = `Request error: ${textstatus}\n${message}`;
             }
-            $('#status-card').html(out.replace('\n', '\n<br>'));
+            setBadgeColor(statusCard.discord, 'light');
+            statusCard.discord.textContent = '--';
+            setBadgeColor(statusCard.server, 'light');
+            statusCard.server.textContent = '--';
+            statusCard.serverProcess.textContent = '--';
+            setNextRestartTimeClass('text-muted');
+            statusCard.nextRestartTime.textContent = '--';
+            statusCard.nextRestartBtnCancel.classList.add('d-none');
+            statusCard.nextRestartBtnEnable.classList.add('d-none');
             if (isWebInterface) {
-                //$('#hostusage-cpu-bar').attr('aria-valuenow', 0).css('width', 0);
-                //$('#hostusage-cpu-text').html('error');
-                //$('#hostusage-memory-bar').attr('aria-valuenow', 0).css('width', 0);
-                //$('#hostusage-memory-text').html('error');
-                $('#favicon').attr('href', 'img/favicon_offline.png');
+                $('#hostusage-cpu-bar').attr('aria-valuenow', 0).css('width', 0);
+                $('#hostusage-cpu-text').html('error');
+                $('#hostusage-memory-bar').attr('aria-valuenow', 0).css('width', 0);
+                $('#hostusage-memory-text').html('error');
                 document.title = 'ERROR - txAdmin';
+                faviconEl.href = `img/favicon_offline.png`;
                 processPlayers(out);
             }
         },
     });
 };
 
-function initWebSocket() {
-    var webSocket;
-
-    fetch('https://api.dashboard.high-io.com/txadmin/websocket').then(function(response) {
-        if (response.status == 200) {
-            response.json().then(function(json) {
-                let token = json.token;
-                let socket = json.socket;
-                let cpuLimit = json.cpuLimit;
-                let memoryLimit = json.memoryLimit;
-
-                webSocket = new WebSocket(socket);
-
-                webSocket.addEventListener('open', function(event) {
-                    webSocket.send(JSON.stringify({ event: 'auth', args: [token] }));
-                });
-
-                webSocket.addEventListener('message', function(event) {
-                    let message = JSON.parse(event.data);
-
-                    if (message.event == 'stats') {
-                        let stats = JSON.parse(message.args[0]);
-
-                        let memoryInMB = bytesToMB(stats['memory_bytes']);
-                        let memoryLimitInMB = memoryLimit;
-
-                        let memoryInGB = mbToGB(memoryInMB);
-                        let memoryLimitInGB = mbToGB(memoryLimitInMB);
-
-                        let memoryPct = formatFixed2(memoryInMB / memoryLimitInMB * 100);
-                        let cpuPct = formatFixed2(stats['cpu_absolute'] / cpuLimit * 100);
-
-                        let memoryToShow = memoryInGB >= 1 ? formatFixed2(memoryInGB) + ' GB' : formatFixed2(memoryInMB) + ' MB';
-                        let memoryLimitToShow = memoryLimitInGB >= 1 ? formatFixed2(memoryLimitInGB) + ' GB' : formatFixed2(memoryLimitInMB) + ' MB';
-
-                        let cpuToShow = formatFixed2(stats['cpu_absolute']) + '%';
-                        let cpuLimitToShow = cpuLimit + '%';
-
-                        $('#hostusage-cpu-bar').attr('aria-valuenow', cpuPct).css('width', cpuPct + '%');
-                        $('#hostusage-memory-bar').attr('aria-valuenow', memoryPct).css('width', memoryPct + '%');
-
-                        $('#hostusage-cpu-text').html(cpuToShow + ' / ' + cpuLimitToShow);
-                        $('#hostusage-memory-text').html(memoryToShow + ' / ' + memoryLimitToShow);
-                    } else if (message.event == 'token expiring') {
-                        webSocket.close();
-
-                        initWebSocket();
-                    }
-                });
-            });
-        }
-    });
-};
-
-function bytesToMB(bytes) {
-    let kb = bytes / 1024;
-    let mb = kb / 1024;
-
-    return mb;
-}
-
-function mbToGB(mb) {
-    let gb = mb / 1024;
-
-    return gb;
-}
-
-function formatFixed2(f) {
-    return parseFloat(f.toFixed(2));
-}
 
 
 //================================================================
@@ -151,7 +184,7 @@ document.getElementById('modChangePassword-save').onclick = (e) => {
         errors.push('The new password has to be between 6 and 24 characters.');
     }
     if (errors.length) {
-        return $.notify({ message: '<b>Errors:</b><br> - ' + errors.join(' <br>\n - ') }, { type: 'warning' });
+        return $.notify({ message: '<b>Error(s):</b><br> - ' + errors.join(' <br>\n - ') }, { type: 'warning' });
     }
 
     const notify = $.notify({ message: '<p class="text-center">Saving...</p>' }, {});
@@ -185,10 +218,9 @@ document.getElementById('modChangePassword-save').onclick = (e) => {
 //================================================================
 //=================================================== On Page Load
 //================================================================
-document.addEventListener('DOMContentLoaded', function(event) {
+document.addEventListener('DOMContentLoaded', function (event) {
     //Setting up status refresh
     refreshData();
-    initWebSocket();
     setInterval(refreshData, STATUS_REFRESH_INTERVAL);
 
     //Opening modal
@@ -196,3 +228,29 @@ document.addEventListener('DOMContentLoaded', function(event) {
         $('#modChangePassword').modal('show');
     }
 });
+
+
+//================================================================
+//=================================== Globally Available API Funcs
+//================================================================
+async function txApiFxserverControl(action) {
+    const confirmOptions = { content: `Are you sure you would like to <b>${action}</b> the server?` };
+    if (action !== 'start' && !await txAdminConfirm(confirmOptions)) {
+        return;
+    }
+    const notify = $.notify({ message: '<p class="text-center">Executing Command...</p>' }, {});
+    txAdminAPI({
+        url: '/fxserver/controls/' + action,
+        type: 'GET',
+        dataType: 'json',
+        timeout: REQ_TIMEOUT_LONG,
+        success: function (data) {
+            updateMarkdownNotification(data, notify);
+        },
+        error: function (xmlhttprequest, textstatus, message) {
+            notify.update('progress', 0);
+            notify.update('type', 'danger');
+            notify.update('message', message);
+        },
+    });
+}
