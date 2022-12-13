@@ -1,6 +1,13 @@
 import React from "react";
-import { styled } from '@mui/material/styles';
-import { Box, Button, DialogContent, Tooltip, TooltipProps, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import {
+  Box,
+  Button,
+  DialogContent,
+  Tooltip,
+  TooltipProps,
+  Typography,
+} from "@mui/material";
 import {
   useAssociatedPlayerValue,
   usePlayerDetailsValue,
@@ -10,18 +17,20 @@ import { fetchNui } from "../../../utils/fetchNui";
 import { useDialogContext } from "../../../provider/DialogProvider";
 import { useSnackbar } from "notistack";
 import { useIFrameCtx } from "../../../provider/IFrameProvider";
-import slug from "slug";
 import { usePlayerModalContext } from "../../../provider/PlayerModalProvider";
-import { translateAlertType, userHasPerm } from "../../../utils/miscUtils";
+import { userHasPerm } from "../../../utils/miscUtils";
 import { useTranslate } from "react-polyglot";
 import { usePermissionsValue } from "../../../state/permissions.state";
+import { DialogLoadError } from "./DialogLoadError";
+import { GenericApiError, GenericApiResp } from "@shared/genericApiTypes";
+import { useSetPlayerModalVisibility } from "@nui/src/state/playerModal.state";
 
-const PREFIX = 'DialogActionView';
+const PREFIX = "DialogActionView";
 
 const classes = {
   actionGrid: `${PREFIX}-actionGrid`,
   tooltipOverride: `${PREFIX}-tooltipOverride`,
-  sectionTitle: `${PREFIX}-sectionTitle`
+  sectionTitle: `${PREFIX}-sectionTitle`,
 };
 
 const StyledDialogContent = styled(DialogContent)({
@@ -47,7 +56,6 @@ export interface TxAdminAPIResp {
 }
 
 const DialogActionView: React.FC = () => {
-
   const { openDialog } = useDialogContext();
   const playerDetails = usePlayerDetailsValue();
   const assocPlayer = useAssociatedPlayerValue();
@@ -55,7 +63,26 @@ const DialogActionView: React.FC = () => {
   const t = useTranslate();
   const { goToFramePage } = useIFrameCtx();
   const playerPerms = usePermissionsValue();
-  const { setModalOpen, closeMenu, showNoPerms } = usePlayerModalContext();
+  const setModalOpen = useSetPlayerModalVisibility();
+  const { closeMenu, showNoPerms } = usePlayerModalContext();
+  if ("error" in playerDetails) return <DialogLoadError />;
+
+  //Helper
+  const handleGenericApiResponse = (
+    result: GenericApiResp,
+    successMessageKey: string
+  ) => {
+    if ("success" in result && result.success === true) {
+      enqueueSnackbar(t(`nui_menu.player_modal.actions.${successMessageKey}`), {
+        variant: "success",
+      });
+    } else {
+      enqueueSnackbar(
+        (result as GenericApiError).error ?? t("nui_menu.misc.unknown_error"),
+        { variant: "error" }
+      );
+    }
+  };
 
   //Moderation
   const handleDM = () => {
@@ -72,27 +99,19 @@ const DialogActionView: React.FC = () => {
       placeholder: t(
         "nui_menu.player_modal.actions.moderation.dm_dialog.placeholder"
       ),
-      onSubmit: (reason: string) => {
-        fetchWebPipe<TxAdminAPIResp>("/player/message", {
-          method: "POST",
-          data: {
-            id: assocPlayer.id,
-            message: reason,
-          },
-        })
-          .then((resp) => {
-            enqueueSnackbar(
-              t("nui_menu.player_modal.actions.moderation.dm_dialog.success"),
-              { variant: translateAlertType(resp.type) }
-            );
-          })
-          .catch((e) => {
-            enqueueSnackbar(
-              t("nui_menu.misc.unknown_error"),
-              { variant: "error" }
-            );
-            console.error(e);
-          });
+      onSubmit: async (message: string) => {
+        try {
+          const result = await fetchWebPipe<GenericApiResp>(
+            `/player/message?mutex=current&netid=${assocPlayer.id}`,
+            {
+              method: "POST",
+              data: { message: message.trim() },
+            }
+          );
+          handleGenericApiResponse(result, "moderation.dm_dialog.success");
+        } catch (error) {
+          enqueueSnackbar((error as Error).message, { variant: "error" });
+        }
       },
     });
   };
@@ -110,35 +129,19 @@ const DialogActionView: React.FC = () => {
       placeholder: t(
         "nui_menu.player_modal.actions.moderation.warn_dialog.placeholder"
       ),
-      onSubmit: (reason: string) => {
-        fetchWebPipe<TxAdminAPIResp>("/player/warn", {
-          method: "POST",
-          data: {
-            id: assocPlayer.id,
-            reason: reason,
-          },
-        })
-          .then((resp) => {
-            if (resp.type === "danger") {
-              return enqueueSnackbar(
-                t("nui_menu.misc.unknown_error"),
-                { variant: "error" }
-              );
+      onSubmit: async (reason: string) => {
+        try {
+          const result = await fetchWebPipe<GenericApiResp>(
+            `/player/warn?mutex=current&netid=${assocPlayer.id}`,
+            {
+              method: "POST",
+              data: { reason: reason.trim() },
             }
-            enqueueSnackbar(
-              t(
-                "nui_menu.player_modal.actions.moderation.warn_dialog.success"
-              ),
-              { variant: translateAlertType(resp.type) }
-            );
-          })
-          .catch((e) => {
-            enqueueSnackbar(
-              t("nui_menu.misc.unknown_error"),
-              { variant: "error" }
-            );
-            console.error(e);
-          });
+          );
+          handleGenericApiResponse(result, "moderation.warn_dialog.success");
+        } catch (error) {
+          enqueueSnackbar((error as Error).message, { variant: "error" });
+        }
       },
     });
   };
@@ -156,62 +159,44 @@ const DialogActionView: React.FC = () => {
       placeholder: t(
         "nui_menu.player_modal.actions.moderation.kick_dialog.placeholder"
       ),
-      onSubmit: (reason: string) => {
-        fetchWebPipe<TxAdminAPIResp>("/player/kick", {
-          method: "POST",
-          data: {
-            id: assocPlayer.id,
-            reason: reason,
-          },
-        })
-          .then((resp) => {
-            if (resp.type === "danger") {
-              return enqueueSnackbar(
-                t("nui_menu.misc.unknown_error"),
-                { variant: "error" }
-              );
+      onSubmit: async (reason: string) => {
+        try {
+          const result = await fetchWebPipe<GenericApiResp>(
+            `/player/kick?mutex=current&netid=${assocPlayer.id}`,
+            {
+              method: "POST",
+              data: { reason: reason.trim() },
             }
-            enqueueSnackbar(
-              t(
-                "nui_menu.player_modal.actions.moderation.kick_dialog.success"
-              ),
-              { variant: translateAlertType(resp.type) }
-            );
-          })
-          .catch((e) => {
-            enqueueSnackbar(
-              t("nui_menu.misc.unknown_error"),
-              { variant: "error" }
-            );
-            console.error(e);
-          });
+          );
+          handleGenericApiResponse(result, "moderation.kick_dialog.success");
+        } catch (error) {
+          enqueueSnackbar((error as Error).message, { variant: "error" });
+        }
       },
     });
   };
 
   const handleSetAdmin = () => {
-    if (!userHasPerm("manage.admins", playerPerms))
+    if (!userHasPerm("manage.admins", playerPerms)) {
       return showNoPerms("Manage Admins");
+    }
+    //If the playerDetails is available
+    const params = new URLSearchParams();
+    if (typeof playerDetails.player.netid === "number") {
+      params.set("autofill", "true");
+      params.set("name", playerDetails.player.pureName);
 
-    //FIXME: use bubble's .normalize('NFKD') instead of slug()
-    const sluggedName = slug(assocPlayer.name, "_");
-    let adminManagerPath = `?autofill&name=${sluggedName}`;
-
-    //If the playerDetails is available 
-    if(typeof playerDetails === 'object'){
-      const discordIdent = playerDetails.identifiers.find((ident) =>
-        ident.includes("discord:")
-      );
-      const fivemIdent = playerDetails.identifiers.find((ident) =>
-        ident.includes("fivem:")
-      );
-
-      if (discordIdent) adminManagerPath += `&discord=${discordIdent}`;
-      if (fivemIdent) adminManagerPath += `&fivem=${fivemIdent}`;
+      for (const id of playerDetails.player.ids) {
+        if (id.startsWith("discord:")) {
+          params.set("discord", id);
+        } else if (id.startsWith("fivem:")) {
+          params.set("citizenfx", id);
+        }
+      }
     }
 
     // TODO: Change iFrame Src through Provider?
-    goToFramePage(`/nui/start/adminManager${adminManagerPath}`);
+    goToFramePage(`/nui/start/adminManager?${params}`);
     setModalOpen(false);
   };
 
@@ -221,9 +206,7 @@ const DialogActionView: React.FC = () => {
 
     fetchNui("healPlayer", { id: assocPlayer.id });
     enqueueSnackbar(
-      t(
-        "nui_menu.player_modal.actions.interaction.notifications.heal_player"
-      ),
+      t("nui_menu.player_modal.actions.interaction.notifications.heal_player"),
       { variant: "success" }
     );
   };
@@ -235,9 +218,7 @@ const DialogActionView: React.FC = () => {
     closeMenu();
     fetchNui("tpToPlayer", { id: assocPlayer.id });
     enqueueSnackbar(
-      t(
-        "nui_menu.player_modal.actions.interaction.notifications.tp_player"
-      ),
+      t("nui_menu.player_modal.actions.interaction.notifications.tp_player"),
       { variant: "success" }
     );
   };
@@ -249,9 +230,7 @@ const DialogActionView: React.FC = () => {
     closeMenu();
     fetchNui("summonPlayer", { id: assocPlayer.id });
     enqueueSnackbar(
-      t(
-        "nui_menu.player_modal.actions.interaction.notifications.bring_player"
-      ),
+      t("nui_menu.player_modal.actions.interaction.notifications.bring_player"),
       { variant: "success" }
     );
   };
@@ -268,7 +247,7 @@ const DialogActionView: React.FC = () => {
     if (!userHasPerm("players.freeze", playerPerms))
       return showNoPerms("Freeze");
     fetchNui("togglePlayerFreeze", { id: assocPlayer.id });
-  }
+  };
 
   //Troll
   const handleDrunk = () => {
@@ -311,16 +290,36 @@ const DialogActionView: React.FC = () => {
         {t("nui_menu.player_modal.actions.moderation.title")}
       </Typography>
       <Box className={classes.actionGrid}>
-        <Button variant="outlined" color="primary" onClick={handleDM} disabled={!userHasPerm("players.message", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleDM}
+          disabled={!userHasPerm("players.message", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.moderation.options.dm")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleWarn} disabled={!userHasPerm("players.warn", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleWarn}
+          disabled={!userHasPerm("players.warn", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.moderation.options.warn")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleKick} disabled={!userHasPerm("players.kick", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleKick}
+          disabled={!userHasPerm("players.kick", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.moderation.options.kick")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleSetAdmin} disabled={!userHasPerm("manage.admins", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleSetAdmin}
+          disabled={!userHasPerm("manage.admins", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.moderation.options.set_admin")}
         </Button>
       </Box>
@@ -328,19 +327,44 @@ const DialogActionView: React.FC = () => {
         {t("nui_menu.player_modal.actions.interaction.title")}
       </Typography>
       <Box className={classes.actionGrid}>
-        <Button variant="outlined" color="primary" onClick={handleHeal} disabled={!userHasPerm("players.heal", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleHeal}
+          disabled={!userHasPerm("players.heal", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.interaction.options.heal")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleGoTo} disabled={!userHasPerm("players.teleport", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleGoTo}
+          disabled={!userHasPerm("players.teleport", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.interaction.options.go_to")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleBring} disabled={!userHasPerm("players.teleport", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleBring}
+          disabled={!userHasPerm("players.teleport", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.interaction.options.bring")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleSpectate} disabled={!userHasPerm("players.spectate", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleSpectate}
+          disabled={!userHasPerm("players.spectate", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.interaction.options.spectate")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleFreeze} disabled={!userHasPerm("players.freeze", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleFreeze}
+          disabled={!userHasPerm("players.freeze", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.interaction.options.toggle_freeze")}
         </Button>
       </Box>
@@ -348,13 +372,28 @@ const DialogActionView: React.FC = () => {
         {t("nui_menu.player_modal.actions.troll.title")}
       </Typography>
       <Box className={classes.actionGrid}>
-        <Button variant="outlined" color="primary" onClick={handleDrunk} disabled={!userHasPerm("players.troll", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleDrunk}
+          disabled={!userHasPerm("players.troll", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.troll.options.drunk")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleSetOnFire} disabled={!userHasPerm("players.troll", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleSetOnFire}
+          disabled={!userHasPerm("players.troll", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.troll.options.fire")}
         </Button>
-        <Button variant="outlined" color="primary" onClick={handleWildAttack} disabled={!userHasPerm("players.troll", playerPerms)}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleWildAttack}
+          disabled={!userHasPerm("players.troll", playerPerms)}
+        >
           {t("nui_menu.player_modal.actions.troll.options.wild_attack")}
         </Button>
       </Box>

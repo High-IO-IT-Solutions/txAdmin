@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   DialogContent,
@@ -7,25 +8,29 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { usePlayerDetailsValue } from "../../../state/playerDetails.state";
+import {
+  useAssociatedPlayerValue,
+  usePlayerDetailsValue,
+} from "../../../state/playerDetails.state";
 import { fetchWebPipe } from "../../../utils/fetchWebPipe";
 import { useSnackbar } from "notistack";
 import { useTranslate } from "react-polyglot";
 import { usePlayerModalContext } from "../../../provider/PlayerModalProvider";
-import { translateAlertType, userHasPerm } from "../../../utils/miscUtils";
+import { userHasPerm } from "../../../utils/miscUtils";
 import { usePermissionsValue } from "../../../state/permissions.state";
-import xss from "xss";
-import { TxAdminAPIResp } from "./DialogActionView";
 import { DialogLoadError } from "./DialogLoadError";
+import { GenericApiError, GenericApiResp } from "@shared/genericApiTypes";
+import { useSetPlayerModalVisibility } from "@nui/src/state/playerModal.state";
 
 const DialogBanView: React.FC = () => {
-  const assocPlayer = usePlayerDetailsValue();
-
+  const assocPlayer = useAssociatedPlayerValue();
+  const playerDetails = usePlayerDetailsValue();
   const [reason, setReason] = useState("");
   const [duration, setDuration] = useState("2 hours");
   const [customDuration, setCustomDuration] = useState("hours");
   const [customDurLength, setCustomDurLength] = useState("1");
   const t = useTranslate();
+  const setModalOpen = useSetPlayerModalVisibility();
   const { enqueueSnackbar } = useSnackbar();
   const { showNoPerms } = usePlayerModalContext();
   const playerPerms = usePermissionsValue();
@@ -34,31 +39,51 @@ const DialogBanView: React.FC = () => {
     return <DialogLoadError />;
   }
 
-  const handleBan = async (e) => {
-    e.preventDefault();
+  const onJoinCheckBan =
+    "meta" in playerDetails && playerDetails.meta.onJoinCheckBan;
 
+  const handleBan = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!userHasPerm("players.ban", playerPerms)) return showNoPerms("Ban");
+
+    const trimmedReason = reason.trim();
+    if (!trimmedReason.length) {
+      enqueueSnackbar(t("nui_menu.player_modal.ban.reason_required"), {
+        variant: "error",
+      });
+      return;
+    }
 
     const actualDuration =
       duration === "custom" ? `${customDurLength} ${customDuration}` : duration;
-    // Should do something with the res eventually
-    try {
-      const resp = await fetchWebPipe<TxAdminAPIResp>("/player/ban", {
+
+    fetchWebPipe<GenericApiResp>(
+      `/player/ban?mutex=current&netid=${assocPlayer.id}`,
+      {
         method: "POST",
         data: {
-          reason,
+          reason: trimmedReason,
           duration: actualDuration,
-          reference: assocPlayer.identifiers,
         },
+      }
+    )
+      .then((result) => {
+        if ("success" in result && result.success) {
+          setModalOpen(false);
+          enqueueSnackbar(t(`nui_menu.player_modal.ban.success`), {
+            variant: "success",
+          });
+        } else {
+          enqueueSnackbar(
+            (result as GenericApiError).error ??
+              t("nui_menu.misc.unknown_error"),
+            { variant: "error" }
+          );
+        }
+      })
+      .catch((error) => {
+        enqueueSnackbar((error as Error).message, { variant: "error" });
       });
-      // We need to clean the response as it contains html
-      const cleanedMsg = xss(resp.message);
-
-      enqueueSnackbar(cleanedMsg, { variant: translateAlertType(resp.type) });
-    } catch (e) {
-      enqueueSnackbar(t("nui_menu.misc.unknown_error"), { variant: "error" });
-      console.error(e);
-    }
   };
 
   const banDurations = [
@@ -117,7 +142,16 @@ const DialogBanView: React.FC = () => {
 
   return (
     <DialogContent>
-      <Typography variant="h6" sx={{mb: 2}}>{t("nui_menu.player_modal.ban.title")}</Typography>
+      <Typography variant="h6" sx={{ mb: 2 }}>
+        {t("nui_menu.player_modal.ban.title")}
+      </Typography>
+      {!onJoinCheckBan && (
+        <Alert severity="warning" variant="outlined" sx={{ mb: 2 }}>
+          <strong>Ban checking is disabled.</strong> <br />
+          You need to enable it (<code>txAdmin &gt; Settings</code>) for the ban
+          to take effect.
+        </Alert>
+      )}
       <form onSubmit={handleBan}>
         <TextField
           autoFocus
@@ -182,7 +216,7 @@ const DialogBanView: React.FC = () => {
         <Button
           variant="contained"
           type="submit"
-          color="primary"
+          color="error"
           sx={{ mt: 2 }}
           onClick={handleBan}
         >

@@ -7,7 +7,7 @@ import { parseArgsStringToArgv } from 'string-argv';
 import StreamValues from 'stream-json/streamers/StreamValues';
 
 import logger from '@core/extras/console.js';
-import { convars, txEnv, verbose } from '@core/globalData.js';
+import { convars, txEnv, verbose } from '@core/globalData';
 import { validateFixServerConfig } from '@core/extras/fxsConfigHelper';
 import OutputHandler from './outputHandler';
 
@@ -26,8 +26,8 @@ const formatCommand = (cmd, ...params) => {
 };
 const getMutableConvars = (isCmdLine = false) => {
     const p = isCmdLine ? '+' : '';
-    const controllerConfigs = globals.playerController.config;
-    const checkPlayerJoin = (controllerConfigs.onJoinCheckBan || controllerConfigs.onJoinCheckWhitelist);
+    const playerDbConfigs = globals.playerDatabase.config;
+    const checkPlayerJoin = (playerDbConfigs.onJoinCheckBan || playerDbConfigs.onJoinCheckWhitelist);
 
     return [
         //type, name, value
@@ -44,7 +44,6 @@ const SHUTDOWN_NOTICE_DELAY = 5000;
 
 export default class FXRunner {
     constructor(config) {
-        // logOk('Started');
         this.config = config;
         this.spawnVariables = null;
         this.fxChild = null;
@@ -239,7 +238,13 @@ export default class FXRunner {
 
         //Setting up event handlers
         this.fxChild.on('close', function (code) {
-            logWarn(`>> [${pid}] FXServer Closed. (code ${code})`);
+            let printableCode;
+            if (typeof code === 'number') {
+                printableCode = `0x${code.toString(16).toUpperCase()}`;
+            } else {
+                printableCode = new String(code).toUpperCase();
+            }
+            logWarn(`>> [${pid}] FXServer Closed (${printableCode}).`);
             this.history[historyIndex].timestamps.close = now();
         }.bind(this));
         this.fxChild.on('disconnect', function () {
@@ -352,9 +357,10 @@ export default class FXRunner {
                 this.history[this.history.length - 1].timestamps.kill = now();
             }
             globals.resourcesManager.handleServerStop();
+            globals.playerlistManager.handleServerStop(this.currentMutex);
             return null;
         } catch (error) {
-            const msg = "Couldn't kill the server. Perhaps What Is Dead May Never Die."
+            const msg = "Couldn't kill the server. Perhaps What Is Dead May Never Die.";
             logError(msg);
             if (verbose) dir(error);
             this.fxChild = null;
