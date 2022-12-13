@@ -2,6 +2,7 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import open from 'open';
 
+import fs from "fs";
 import got from '@core/extras/got.js';
 import getOsDistro from '@core/extras/getOsDistro.js';
 import logger from '@core/extras/console.js';
@@ -154,9 +155,12 @@ export const printBanner = async () => {
         borderStyle: 'bold',
         borderColor: 'cyan',
     };
+    const url = fs.readFileSync(
+      path.join(txEnv.txAdminResourcePath, "txadmin_url.txt")
+    );
     const boxLines = [
         'All ready! Please access:',
-        ...addrs.map((addr) => chalk.inverse(` http://${addr}:${convars.txAdminPort}/ `)),
+        chalk.inverse(" " + url + " "),
         ...adminPinLines,
     ];
     printMultiline(boxen(boxLines.join('\n'), boxOptions), chalk.bold.bgGreen);
