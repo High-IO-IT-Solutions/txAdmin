@@ -18,7 +18,7 @@ const logDie = (x: string) => {
 const getBuild = (ver: any) => {
     try {
         const res = /v1\.0\.0\.(\d{4,5})\s*/.exec(ver);
-        // @ts-ignore: let it throw
+        // @ts-expect-error: let it throw
         return parseInt(res[1]);
     } catch (error) {
         return 9999;
@@ -58,6 +58,7 @@ const resourceName = GetCurrentResourceName();
 //4548 = more or less when node v16 was added
 //4574 = add missing PRINT_STRUCTURED_TRACE declaration
 //4574 = add resource field to PRINT_STRUCTURED_TRACE
+//6185 = added ScanResourceRoot (not yet in use)
 const minFXServerVersion = 4574;
 const fxServerVersion = getBuild(getConvarString('version'));
 if (fxServerVersion === 9999) {

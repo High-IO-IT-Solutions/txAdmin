@@ -66,7 +66,7 @@ async function handleApprovals(ctx: Context, action: any): Promise<GenericApiRes
             : `${idType}:${idValue}`;
         if (idType === 'discord') {
             try {
-                const { tag, avatar } = await discordBot.resolveMember(idValue);
+                const { tag, avatar } = await discordBot.resolveMemberProfile(idValue);
                 playerName = tag;
                 playerAvatar = avatar;
             } catch (error) { }
@@ -142,7 +142,7 @@ async function handleRequests(ctx: Context, action: any): Promise<GenericApiResp
         const req = requests[0]; //just getting the first
 
         //Register whitelistApprovals
-        const playerName = req.discordTag ?? req.playerDisplayName
+        const playerName = req.discordTag ?? req.playerDisplayName;
         try {
             playerDatabase.registerWhitelistApprovals({
                 identifier: `license:${req.license}`,

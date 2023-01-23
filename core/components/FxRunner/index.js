@@ -27,7 +27,7 @@ const formatCommand = (cmd, ...params) => {
 const getMutableConvars = (isCmdLine = false) => {
     const p = isCmdLine ? '+' : '';
     const playerDbConfigs = globals.playerDatabase.config;
-    const checkPlayerJoin = (playerDbConfigs.onJoinCheckBan || playerDbConfigs.onJoinCheckWhitelist);
+    const checkPlayerJoin = (playerDbConfigs.onJoinCheckBan || playerDbConfigs.whitelistMode !== 'disabled');
 
     return [
         //type, name, value
@@ -43,17 +43,17 @@ const SHUTDOWN_NOTICE_DELAY = 5000;
 
 
 export default class FXRunner {
-    constructor(config) {
+    constructor(txAdmin, config) {
         this.config = config;
         this.spawnVariables = null;
         this.fxChild = null;
-        this.restartDelayOverride == false;
+        this.restartDelayOverride = 0;
         this.history = [];
         this.lastKillRequest = 0;
-        this.fxServerPort = null;
         this.fxServerHost = null;
         this.currentMutex = null;
-        this.outputHandler = new OutputHandler();
+        this.cfxId = null;
+        this.outputHandler = new OutputHandler(txAdmin);
     }
 
 
@@ -450,8 +450,7 @@ export default class FXRunner {
      * @param {string} command
      */
     liveConsoleCmdHandler(session, command) {
-        log(`${session.auth.username} executing ` + chalk.inverse(' ' + command + ' '), 'SocketIO');
-        globals.logger.admin.write(`[${session.auth.username}] ${command}`);
+        globals.logger.admin.write(session.auth.username, command, 'command');
         globals.fxRunner.srvCmd(command);
     }
 
