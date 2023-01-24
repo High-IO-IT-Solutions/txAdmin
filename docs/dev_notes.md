@@ -1,69 +1,64 @@
 # TODO:
-- [x] rename txAdmin Logs to System Logs (check chungus commands as well)
-- [x] Finish diagnostics report function
-- [x] Make cyclical exec in cfg file block the server start
-- [x] change nui player card default tab back to actions
-- [x] upgrade packages
-- [x] bot: upgrade discord.js
-- [x] bot: convert into slash commands
-- [x] bot: add NEW tag to settings menu and discord tab
-- [x] bot: add dynamic activity ("watching xx/yy players")
-- [x] bot: add persistent /status message
-- [x] bot: embed/config editor on settings page
-- [x] bot: embed/config docs file
-- [x] bot: fix resolveMember()
-- [x] bot: add /whitelist command
-- [x] bot: add /info command
-- [x] add new whitelist modes
-    - [x] admin-only (#516)
-    - [x] guild membership (#450)
-    - [x] guild roles
-- [x] bot: update AGAIN to djs v14
-- [x] fix `Restarting the fxserver with delay override 0.`
-- [x] add cap to `stats_heatmapData_v1.json` (StatsCollector.hardConfigs.performance.lengthCap)
-- [x] chore(core): move admin action log() to logger
-- [x] Improve the message `[txAdmin] You do not have at least 1 valid identifier [...]`
-- [x] CFG Editor: add hotkeys for search, comment, and restart sv
-- [x] add a `Wait(0)` on `sv_main.lua` kick/ban handlers? (Issue #639)
-- [x] merge translations
-- [x] remove `discord.*` from locale files
-- [x] adjust the message that shows when deployer step 3 has no server.cfg to read
-- [x] set nui/vite.config.ts > target > chrome103
-- [x] checkJoin: add messages to locale files
-- [x] checkJoin: customMessage `\n` to `<br>`
-- [x] fix(core): cfx.re login match by admin id instead of name
-- [x] finish txdiagnostics backend, test e2e one last time
-- [x] bot: change settings page description
+- [x] QoL: add redirect post login if invalid session
+- [x] Improve discord embed UX:
+    - [x] embed placeholder
+    - [x] check for the emoji
+    - [x] check for the url fields
+    - [x] discord auth not admin response
+    - [x] bot save: intent message
+    - [x] bot save: could not resolve guild id = was the bot invited?
+    - [x] embed jsons reset buttons
+- [x] add superjump
+- [x] the PR about hiding notifications
+    - [x] remove monitor.disableChatWarnings
+- [x] At the schedule restart input prompt, add a note saying what is the current server time
+- [x] create events for dynamic scheduled restarts
+- [x] create new whitelist events
+    - [x] whitelistPlayer:
+        - action: added/removed
+        - license: xxxxx
+        - playerName: player name
+        - adminName: admin name
+    - [x] whitelistPreApproval:
+        - action: added/removed
+        - identifier: `discord:xxxxxx` / `license:xxxxx`
+        - playerName?: player name
+        - adminName: admin name
+    - [x] whitelistRequest:
+        - action: requested/approved/denied/deniedAll
+        - playerName?: player name, if action != deniedAll
+        - requestId?: Rxxxx, if action != deniedAll
+        - license?: xxxxxx, if action != deniedAll
+        - adminName?: admin name, if action != requested
+- [x] wav for announcements and DMs
+- [x] update status embed as soon as server status changes
 
 
 
-
-
-# Next up:
-- [ ] add superjump
-- [ ] the PR about hiding notifications
-- [ ] wav for announcements
+## Optional
 - [ ] bot: fix http agent options for localAddress
 - [ ] bot: add rate limit events to diagnostics page
 - [ ] change dashboard median player message
     - top 1000: "your server seems to be in top 1000, join and type /server to track your progress"
     - top 500: "you might be in top 500, join discord and see if you are eligible for the role"
-- [ ] update readme with new features
+- [ ] update readme with new features and contributing warning
 - [ ] stats: 
     - [ ] ????
     - [ ] jwe
 
-```lua
---Superjump
-CreateThread(function()
-  local Wait = Wait
-  local id = PlayerId()
-  while true do
-    SetSuperJumpThisFrame(id)
-    Wait(0)
-  end
-end)
-```
+
+# Next up:
+- [ ] xxxxxx
+
+//essa logica não é "GetConvarBool" e sim negativa
+GetConvar\('([^']+)', 'false'\) ~= 'true'
+GetConvarBool('$1')
+
+function GetConvarBool(cvName)
+  return (GetConvar(cvName, 'false') ~= 'true')
+end
+
+criar variáveis globais setadas no shared, pra salvar o trabalho de dar GetConvar em todo arquivo
 
 ===================
 ### MUI update
@@ -71,6 +66,7 @@ end)
 5.11.0 broken
 To test it, remove the `^`
 rm -rf node_modules/; npm i; npm list @mui/material; npm run dev:menu:game
+https://github.com/mui/material-ui/blob/master/CHANGELOG.md
 ===================
 
 
@@ -97,23 +93,7 @@ teste:
 
 - [ ] no duplicated id type in bans? preparing for the new db migration
 - [ ] reorder `sv_main.lua` and add `local` prefix to most if not all functions
-- [ ] create events for dynamic scheduled restarts
-- [ ] create new whitelist events
-    - [ ] whitelistPlayer:
-        - license: xxxxx
-        - author: admin name
-        - status: true/false
-    - [ ] whitelistPreApproval:
-        - action: added/removed
-        - identifier: `discord:xxxxxx` / `license:xxxxx`
-        - author: admin name
-    - [ ] whitelistRequest:
-        - action: requested/approved/denied
-        - author: either player name, or admin name
-        - requestId: Rxxxx
-        - license: xxxxxx
 - [ ] mock out insights page (assets + http reqs)
-- [ ] At the schedule restart input prompt, add a note saying what is the current server time
 - [ ] `cfg cyclical 'exec' command detected to file` should be blocking instead of warning. Behare that this is not trivial without also turning missing exec target read error also being error
 - [ ] maybe some sort of lockfile to admins.json file which would disable admin manager?
 
@@ -239,6 +219,7 @@ process.exit();
 ## New config
 - 2023 acho que os defaults deveriam existir dentro dos components
 e sempre que outro componente precisar saber uma config, deve passar pelo componente
+- need to have a version and have migration, like the database
 
 - do research, but i think we don't need any lib
 - break up cfg files into `txData/<profile>/global.txcfg` and `txData/<profile>/server.txcfg`
@@ -401,6 +382,7 @@ https://tanstack.com/virtual/v3
 For the tx ingame menu, replace actions grid with flexbox
 https://youtu.be/3elGSZSWTbM
 around 12:00
+https://immerjs.github.io/immer/ maybe?
 
 
 ### Update Event + Rollout strategy
@@ -513,7 +495,7 @@ To check of admin perm, just do `IsPlayerAceAllowed(src, 'txadmin.xxxxxx')`
 
 
 ### txPointing (old txBanana)
-- code prototype with ItsANoBrainer#1337
+- code prototype with ItsANoBrainer#1337 (https://github.com/tabarra/txBanana)
 - keybind to toggle gun (grab or put away)
 - when you point at player, show above head some info
 - when you "shoot" it will open the player menu and hopefully fire a laser or something

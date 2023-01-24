@@ -28,6 +28,10 @@ TX_LUACOMHOST = GetConvar("txAdmin-luaComHost", "invalid")
 TX_LUACOMTOKEN = GetConvar("txAdmin-luaComToken", "invalid")
 TX_VERSION = GetResourceMetadata(GetCurrentResourceName(), 'version') -- for now, only used in the start print
 TX_DEBUGMODE = (GetConvar('txAdmin-debugMode', 'false') == 'true') -- TODO: start using this global
+TX_HIDE_ANNOUNCEMENT = (GetConvar('txAdmin-hideDefaultAnnouncement', 'false') == 'true')
+TX_HIDE_DIRECTMESSAGE = (GetConvar('txAdmin-hideDefaultDirectMessage', 'false') == 'true')
+TX_HIDE_WARNING = (GetConvar('txAdmin-hideDefaultWarning', 'false') == 'true')
+TX_HIDE_SCHEDULEDRESTARTWARNING = (GetConvar('txAdmin-hideDefaultScheduledRestartWarning', 'false') == 'true')
 
 -- Checking convars
 if TX_LUACOMHOST == "invalid" or TX_LUACOMTOKEN == "invalid" then
@@ -143,13 +147,25 @@ end
 -- =============================================
 -- Broadcast admin message to all players
 local function handleAnnouncementEvent(eventData)
-    TriggerClientEvent("txAdmin:receiveAnnounce", -1, eventData.message, eventData.author)
+    if not TX_HIDE_ANNOUNCEMENT then
+        TriggerClientEvent("txAdmin:receiveAnnounce", -1, eventData.message, eventData.author)
+    end
     TriggerEvent('txaLogger:internalChatMessage', 'tx', "(Broadcast) "..eventData.author, eventData.message)
+end
+
+-- Broadcast through an announcement that the server will restart in XX minutes
+local function handleScheduledRestartEvent(eventData)
+    if not TX_HIDE_SCHEDULEDRESTARTWARNING then
+        TriggerClientEvent("txAdmin:receiveAnnounce", -1, eventData.translatedMessage, 'txAdmin')
+    end
+    TriggerEvent('txaLogger:internalChatMessage', 'tx', "(Broadcast) txAdmin", eventData.translatedMessage)
 end
 
 -- Sends a direct message from an admin to a player
 local function handleDirectMessageEvent(eventData)
-    TriggerClientEvent("txAdmin:receiveDirectMessage", eventData.target, eventData.message, eventData.author)
+    if not TX_HIDE_DIRECTMESSAGE then
+        TriggerClientEvent("txAdmin:receiveDirectMessage", eventData.target, eventData.message, eventData.author)
+    end
     TriggerEvent('txaLogger:internalChatMessage', 'tx', "(DM) "..eventData.author, eventData.message)
 end
 
@@ -163,7 +179,9 @@ end
 local function handleWarnEvent(eventData)
     local pName = GetPlayerName(eventData.target)
     if pName ~= nil then
-        TriggerClientEvent('txAdminClient:warn', eventData.target, eventData.author, eventData.reason)
+        if not TX_HIDE_WARNING then
+            TriggerClientEvent("txAdminClient:warn", eventData.target, eventData.author, eventData.reason)
+        end
         log("Warning "..pName.." with reason: "..eventData.reason)
     else
         logError('handleWarnEvent: player not found')
@@ -236,6 +254,8 @@ function txaEvent(source, args)
         return handleBanEvent(eventData)
     elseif eventName == 'serverShuttingDown' then 
         return handleShutdownEvent(eventData)
+    elseif eventName == 'scheduledRestart' then 
+        return handleScheduledRestartEvent(eventData)
     end
     CancelEvent()
 end

@@ -84,7 +84,10 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-item nav-link <%= activeTab === 'menu' ? 'active' : '' %>" id="nav-menu-tab" data-toggle="tab" href="#nav-menu" role="tab" aria-controls="nav-menu" aria-selected="true">Menu</a>
+                        <a class="nav-item nav-link <%= activeTab === 'menu' ? 'active' : '' %>" id="nav-menu-tab" data-toggle="tab" href="#nav-menu" role="tab" aria-controls="nav-menu" aria-selected="true">
+                            Game
+                            &nbsp; <span class="badge badge-danger">NEW</span>
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -346,7 +349,7 @@
                             </label>
                             <div class="col-sm-9">
                                 <input type="text" class="form-control" id="frmPlayerManager-whitelistedDiscordRoles" value="<%= playerDatabase.whitelistedDiscordRoles || '' %>"
-                                    placeholder="578102842909523978, 845330415191064617" <%= readOnly ? 'disabled' : '' %>>
+                                    placeholder="000000000000000000, 000000000000000000" <%= readOnly ? 'disabled' : '' %>>
                                 <span class="form-text text-muted">
                                     The ID of the Discord roles that are whitelisted to join the server. <br>
                                     This field supports multiple roles, separated by comma. <br>
@@ -420,7 +423,7 @@
                             <div class="col-sm-9">
                                 <input type="text" class="form-control blur-input" id="frmDiscord-token" 
                                     value="<%= readOnly ? '[redacted]' : (discord.token || '') %>"
-                                    placeholder="CXPcWbxKOHpwlUBaYKznIfkz.ExpTAB.NX-3YxfmVIGUJLGbPamViXGAEiY"
+                                    placeholder="xxxxxxxxxxxxxxxxxxxxxxxx.xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxx"
                                     maxlength="96" autocomplete="off" <%= readOnly ? 'disabled' : '' %>>
                                 <span class="form-text text-muted">
                                     To get a token and the bot to join your server, follow these two guides:
@@ -428,7 +431,9 @@
                                         target="_blank" rel="noopener noreferrer">Setting up a bot application</a> and
                                     <a href="https://discordjs.guide/preparations/adding-your-bot-to-servers.html"
                                         target="_blank" rel="noopener noreferrer">Adding your bot to servers</a> <br>
-                                    <strong>Note:</strong> The bot requires the GUILD MEMBERS intent, which can be set at the Discord Developer Portal.
+                                    <strong>Note:</strong> Do not reuse the same token for another bot.  <br>
+                                    <strong>Note:</strong> The bot requires the GUILD MEMBERS intent, which can be set at the
+                                    <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Discord Developer Portal</a>.
                                 </span>
                             </div>
                         </div>
@@ -441,7 +446,7 @@
                             <div class="col-sm-9">
                                 <input type="number" class="form-control" id="frmDiscord-guild"
                                     value="<%= discord.guild || '' %>" 
-                                    placeholder="577993482761928734" <%= readOnly ? 'disabled' : '' %>>
+                                    placeholder="000000000000000000" <%= readOnly ? 'disabled' : '' %>>
                                 <span class="form-text text-muted">
                                     The ID of the Discord Guild of your server. <br>
                                     To get the Guild ID, go to Discord's settings and
@@ -456,7 +461,7 @@
                             <div class="col-sm-9">
                                 <input type="number" class="form-control" id="frmDiscord-announceChannel"
                                     value="<%= discord.announceChannel || '' %>" 
-                                    placeholder="578045190955335691" <%= readOnly ? 'disabled' : '' %>>
+                                    placeholder="000000000000000000" <%= readOnly ? 'disabled' : '' %>>
                                 <span class="form-text text-muted">
                                     The ID of the channel to send Announcements (eg server restarts). <br>
                                     Leave it blank to disable this feature. <br>
@@ -491,6 +496,8 @@
                                 </button>
                                 <textarea id="frmDiscord-statusEmbedJson" class="d-none"><%= discord.embedJson || '' %></textarea>
                                 <textarea id="frmDiscord-statusEmbedConfigJson" class="d-none"><%= discord.embedConfigJson || '' %></textarea>
+                                <textarea id="frmDiscord-statusEmbedJsonDefault" class="d-none"><%= defaults.discord.embedJson || '' %></textarea>
+                                <textarea id="frmDiscord-statusEmbedConfigJsonDefault" class="d-none"><%= defaults.discord.embedConfigJson || '' %></textarea>
                                 <span class="form-text text-muted">
                                     The server status embed is customizable by editing the two JSONs above. <br>
                                     <strong>Note:</strong> Use the command <code>/status add</code> on a channel that the bot has the "Send Message" permission to setup the embed.
@@ -507,7 +514,7 @@
                     </div>
                     <!-- /Discord Tab -->
 
-                    <!-- Menu Tab -->
+                    <!-- Game/Menu Tab -->
                     <div class="tab-pane fade <%= activeTab === 'menu' ? 'active show' : '' %>" id="nav-menu" role="tabpanel" aria-labelledby="nav-menu-tab">
                         <div class="form-group row">
                             <label class="col-sm-3 col-form-label">Enable Menu</label>
@@ -518,13 +525,13 @@
                                     <span class="c-switch-slider" data-checked="Yes" data-unchecked="No"></span>
                                 </label>
                                 <span class="form-text text-muted">
-                                    When enabled, admins will be able to open the menu by typing <code>/tx</code> or using the keybind configured in the FiveM settings.
+                                    When enabled, admins will be able to open the menu by typing <code>/tx</code> or using the keybind configured in the FiveM/RedM settings.
                                 </span>
                             </div>
                         </div>
 
                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label">Align Right</label>
+                            <label class="col-sm-3 col-form-label">Align Menu Right</label>
                             <div class="col-sm-9">
                                 <label class="c-switch c-switch-label c-switch-pill c-switch-success fix-pill-form">
                                     <input class="c-switch-input" type="checkbox" id="frmMenu-alignRight"
@@ -538,7 +545,7 @@
                         </div>
 
                         <div class="form-group row">
-                            <label for="frmMenu-pageKey" class="col-sm-3 col-form-label">Page Switch Key</label>
+                            <label for="frmMenu-pageKey" class="col-sm-3 col-form-label">Menu Page Switch Key</label>
                             <div class="col-sm-9">
                                 <input type="text" class="form-control" id="frmMenu-pageKey"
                                     value="<%= global.menuPageKey || '' %>"
@@ -547,6 +554,75 @@
                                     The key used to to switch tabs in the menu. <br>
                                     Click above and press any key to change the configuration. <br>
                                     <strong>Note:</strong> The default is <code>Tab</code>, and you cannot use <code>Escape</code> or <code>Backspace</code>.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">
+                                Hide Announcement <br>
+                                Notification
+                            </label>
+                            <div class="col-sm-9">
+                                <label class="switch-lg c-switch c-switch-label c-switch-pill c-switch-success fix-pill-form">
+                                    <input class="c-switch-input" type="checkbox" id="frmMenu-hideDefaultAnnouncement"
+                                        <%= global.hideDefaultAnnouncement || '' %> <%= readOnly ? 'disabled' : '' %>>
+                                    <span class="c-switch-slider" data-checked="Hide" data-unchecked="Show"></span>
+                                </label>
+                                <span class="form-text text-muted">
+                                    Suppresses the display of announcements, allowing you to implement your own announcement via the event <code>txAdmin:events:announcement</code>
+                                    <a href="https://github.com/tabarra/txAdmin/blob/master/docs/menu.md" target="_blank" rel="noopener noreferrer">(docs page)</a>.
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">
+                                Hide Direct Message <br>
+                                Notification
+                            </label>
+                            <div class="col-sm-9">
+                                <label class="switch-lg c-switch c-switch-label c-switch-pill c-switch-success fix-pill-form">
+                                    <input class="c-switch-input" type="checkbox" id="frmMenu-hideDefaultDirectMessage"
+                                        <%= global.hideDefaultDirectMessage || '' %> <%= readOnly ? 'disabled' : '' %>>
+                                    <span class="c-switch-slider" data-checked="Hide" data-unchecked="Show"></span>
+                                </label>
+                                <span class="form-text text-muted">
+                                    Suppresses the display of direct messages, allowing you to implement your own direct message notification via the event <code>txAdmin:events:playerDirectMessage</code>
+                                    <a href="https://github.com/tabarra/txAdmin/blob/master/docs/menu.md" target="_blank" rel="noopener noreferrer">(docs page)</a>.
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">
+                                Hide Warning <br>
+                                Notification
+                            </label>
+                            <div class="col-sm-9">
+                                <label class="switch-lg c-switch c-switch-label c-switch-pill c-switch-success fix-pill-form">
+                                    <input class="c-switch-input" type="checkbox" id="frmMenu-hideDefaultWarning"
+                                        <%= global.hideDefaultWarning || '' %> <%= readOnly ? 'disabled' : '' %>>
+                                    <span class="c-switch-slider" data-checked="Hide" data-unchecked="Show"></span>
+                                </label>
+                                <span class="form-text text-muted">
+                                    Suppresses the display of warnings, allowing you to implement your own warning via the event <code>txAdmin:events:playerWarned</code>
+                                    <a href="https://github.com/tabarra/txAdmin/blob/master/docs/menu.md" target="_blank" rel="noopener noreferrer">(docs page)</a>.
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">
+                                Hide Scheduled Restart <br>
+                                Warnings
+                            </label>
+                            <div class="col-sm-9">
+                                <label class="switch-lg c-switch c-switch-label c-switch-pill c-switch-success fix-pill-form">
+                                    <input class="c-switch-input" type="checkbox" id="frmMenu-hideDefaultScheduledRestartWarning"
+                                        <%= global.hideDefaultScheduledRestartWarning || '' %> <%= readOnly ? 'disabled' : '' %>>
+                                    <span class="c-switch-slider" data-checked="Hide" data-unchecked="Show"></span>
+                                </label>
+                                <span class="form-text text-muted">
+                                    Suppresses the display of scheduled restart warnings, allowing you to implement your own warning via the event <code>txAdmin:events:scheduledRestart</code>
+                                    <a href="https://github.com/tabarra/txAdmin/blob/master/docs/menu.md" target="_blank" rel="noopener noreferrer">(docs page)</a>.
                                 </span>
                             </div>
                         </div>
@@ -580,7 +656,7 @@
 <script src="js/codeEditor/dialog.js"></script>
 <script src="js/codeEditor/search.js"></script>
 
-<!-- Submit Report modal -->
+<!-- Embed JSON editors -->
 <div class="modal fade" id="modJsonEditor" tabindex="-1" role="dialog" aria-labelledby="modJsonEditor-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: min(730px, calc(100% - 30px));">
         <div class="modal-content">
@@ -604,6 +680,9 @@
             <div class="modal-footer text-center">
                 <div class="mx-auto">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    &nbsp;
+                    &nbsp;
+                    <button type="button" class="btn btn-secondary" id="modJsonEditor-revertBtn">Revert to Default</button>
                     &nbsp;
                     &nbsp;
                     <button type="button" class="btn btn-success" id="modJsonEditor-saveBtn">Done</button>
@@ -753,7 +832,6 @@
     $('#frmMonitor-save').click(function () {
         let data = {
             restarterSchedule: $('#frmMonitor-restarterSchedule').val().trim(),
-            disableChatWarnings: ($('#frmMonitor-chatMessages').is(':checked') === true),
             resourceStartingTolerance: $('#frmMonitor-resourceStartingTolerance').val(),
         }
         const notify = $.notify({ message: '<p class="text-center">Saving...</p>' }, {});
@@ -778,16 +856,20 @@
 
     //============================================== Discord Settings
     let jsonBeingEdited = false;
+    let defaultOfJsonBeingEdited = false;
     const discEls = {
         modal: document.getElementById('modJsonEditor'),
         title: document.getElementById('modJsonEditor-title'),
         cmTarget: document.getElementById('modJsonEditor-cmTarget'),
         externalEditorBtn: document.getElementById('modJsonEditor-externalEditorBtn'),
         saveBtn: document.getElementById('modJsonEditor-saveBtn'),
+        revertBtn: document.getElementById('modJsonEditor-revertBtn'),
         embedJsonBtn: document.getElementById('frmDiscord-editStatusEmbedJsonBtn'),
         embedJsonText: document.getElementById('frmDiscord-statusEmbedJson'),
+        embedJsonDefault: document.getElementById('frmDiscord-statusEmbedJsonDefault'),
         embedConfigJsonBtn: document.getElementById('frmDiscord-editStatusEmbedConfigJsonBtn'),
         embedConfigJsonText: document.getElementById('frmDiscord-statusEmbedConfigJson'),
+        embedConfigJsonDefault: document.getElementById('frmDiscord-statusEmbedConfigJsonDefault'),
     }
     const setJsonEditor = (jsonString) => {
         if(window.CMInstance){
@@ -804,15 +886,20 @@
         });
     }
     
+    discEls.revertBtn.addEventListener('click', (e) => {
+        setJsonEditor(defaultOfJsonBeingEdited);
+    });
     discEls.embedJsonBtn.addEventListener('click', (e) => {
         discEls.title.textContent = 'Embed JSON Editor';
         jsonBeingEdited = discEls.embedJsonText;
+        defaultOfJsonBeingEdited = discEls.embedJsonDefault.value;
         setJsonEditor(discEls.embedJsonText.value);
         $('#modJsonEditor').modal('show');
     });
     discEls.embedConfigJsonBtn.addEventListener('click', (e) => {
         discEls.title.textContent = 'Embed Config JSON Editor';
         jsonBeingEdited = discEls.embedConfigJsonText;
+        defaultOfJsonBeingEdited = discEls.embedConfigJsonDefault.value;
         setJsonEditor(discEls.embedConfigJsonText.value);
         $('#modJsonEditor').modal('show');
     });
@@ -869,9 +956,7 @@
             data: data,
             tiemout: REQ_TIMEOUT_LONG,
             success: function (data) {
-                notify.update('progress', 0);
-                notify.update('type', data.type);
-                notify.update('message', data.message);
+                updateMarkdownNotification(data, notify);
             },
             error: function (xmlhttprequest, textstatus, message) {
                 notify.update('progress', 0);
@@ -898,7 +983,11 @@
         let data = {
             menuEnabled: ($('#frmMenu-enabled').is(':checked') === true),
             menuAlignRight: ($('#frmMenu-alignRight').is(':checked') === true),
-            menuPageKey: $('#frmMenu-pageKey').val().trim()
+            menuPageKey: $('#frmMenu-pageKey').val().trim(),
+            hideDefaultAnnouncement: ($('#frmMenu-hideDefaultAnnouncement').is(':checked') === true),
+            hideDefaultDirectMessage: ($('#frmMenu-hideDefaultDirectMessage').is(':checked') === true),
+            hideDefaultWarning: ($('#frmMenu-hideDefaultWarning').is(':checked') === true),
+            hideDefaultScheduledRestartWarning: ($('#frmMenu-hideDefaultScheduledRestartWarning').is(':checked') === true),
         };
         const notify = $.notify({ message: '<p class="text-center">Saving...</p>' }, {});
 

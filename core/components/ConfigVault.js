@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { cloneDeep } from 'lodash-es';
 import logger from '@core/extras/console.js';
 import { verbose } from '@core/globalData';
-import { defaultEmbedJson, defaultembedConfigJson } from '@core/components/DiscordBot/defaultJsons';
+import { defaultEmbedJson, defaultEmbedConfigJson } from '@core/components/DiscordBot/defaultJsons';
 const { dir, log, logOk, logWarn, logError } = logger(modulename);
 
 //Helper functions
@@ -117,13 +117,16 @@ export default class ConfigVault {
                 menuEnabled: toDefault(cfg.global.menuEnabled, true),
                 menuAlignRight: toDefault(cfg.global.menuAlignRight, false),
                 menuPageKey: toDefault(cfg.global.menuPageKey, 'Tab'),
+                hideDefaultAnnouncement: toDefault(cfg.global.hideDefaultAnnouncement, false),
+                hideDefaultDirectMessage: toDefault(cfg.global.hideDefaultDirectMessage, false),
+                hideDefaultWarning: toDefault(cfg.global.hideDefaultWarning, false),
+                hideDefaultScheduledRestartWarning: toDefault(cfg.global.hideDefaultScheduledRestartWarning, false),
             };
             out.logger = toDefault(cfg.logger, {}); //not in template
             out.monitor = {
                 restarterSchedule: toDefault(cfg.monitor.restarterSchedule, []),
                 cooldown: toDefault(cfg.monitor.cooldown, null), //not in template
                 resourceStartingTolerance: toDefault(cfg.monitor.resourceStartingTolerance, 120), //not in template
-                disableChatWarnings: toDefault(cfg.monitor.disableChatWarnings, null), //not in template
             };
             out.playerDatabase = {
                 onJoinCheckBan: toDefault(cfg.playerDatabase.onJoinCheckBan, true),
@@ -149,7 +152,7 @@ export default class ConfigVault {
                 guild: toDefault(cfg.discordBot.guild, null),
                 announceChannel: toDefault(cfg.discordBot.announceChannel, null),
                 embedJson: toDefault(cfg.discordBot.embedJson, defaultEmbedJson),
-                embedConfigJson: toDefault(cfg.discordBot.embedConfigJson, defaultembedConfigJson),
+                embedConfigJson: toDefault(cfg.discordBot.embedConfigJson, defaultEmbedConfigJson),
             };
             out.fxRunner = {
                 serverDataPath: toDefault(cfg.fxRunner.serverDataPath, null),
@@ -195,6 +198,10 @@ export default class ConfigVault {
             cfg.global.menuEnabled = (cfg.global.menuEnabled === 'true' || cfg.global.menuEnabled === true);
             cfg.global.menuAlignRight = (cfg.global.menuAlignRight === 'true' || cfg.global.menuAlignRight === true);
             cfg.global.menuPageKey = cfg.global.menuPageKey || 'Tab';
+            cfg.global.hideDefaultAnnouncement = (cfg.global.hideDefaultAnnouncement === 'true' || cfg.global.hideDefaultAnnouncement === true);
+            cfg.global.hideDefaultDirectMessage = (cfg.global.hideDefaultDirectMessage === 'true' || cfg.global.hideDefaultDirectMessage === true);
+            cfg.global.hideDefaultWarning = (cfg.global.hideDefaultWarning === 'true' || cfg.global.hideDefaultWarning === true);
+            cfg.global.hideDefaultScheduledRestartWarning = (cfg.global.hideDefaultScheduledRestartWarning === 'true' || cfg.global.hideDefaultScheduledRestartWarning === true);
 
             //Logger - NOTE: this one default's i'm doing directly into the class
             cfg.logger.fxserver = toDefault(cfg.logger.fxserver, {});
@@ -206,7 +213,6 @@ export default class ConfigVault {
             cfg.monitor.restarterSchedule = cfg.monitor.restarterSchedule || [];
             cfg.monitor.cooldown = parseInt(cfg.monitor.cooldown) || 60; //not in template - 45 > 60 > 90 -> 60 after fixing the "extra time" logic
             cfg.monitor.resourceStartingTolerance = parseInt(cfg.monitor.resourceStartingTolerance) || 120;
-            cfg.monitor.disableChatWarnings = (cfg.monitor.disableChatWarnings === 'true' || cfg.monitor.disableChatWarnings === true);
 
             //Player Controller
             cfg.playerDatabase.onJoinCheckBan = (cfg.playerDatabase.onJoinCheckBan === null)
@@ -225,7 +231,7 @@ export default class ConfigVault {
             //DiscordBot
             cfg.discordBot.enabled = (cfg.discordBot.enabled === 'true' || cfg.discordBot.enabled === true);
             cfg.discordBot.embedJson = cfg.discordBot.embedJson || defaultEmbedJson;
-            cfg.discordBot.embedConfigJson = cfg.discordBot.embedConfigJson || defaultembedConfigJson;
+            cfg.discordBot.embedConfigJson = cfg.discordBot.embedConfigJson || defaultEmbedConfigJson;
 
             //FXRunner
             cfg.fxRunner.logPath = cfg.fxRunner.logPath || `${this.serverProfilePath}/logs/fxserver.log`; //not in template

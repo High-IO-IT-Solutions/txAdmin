@@ -260,7 +260,6 @@ async function handleMonitor(ctx: Context) {
     //Sanity check
     if (
         isUndefined(ctx.request.body.restarterSchedule),
-        isUndefined(ctx.request.body.disableChatWarnings),
         isUndefined(ctx.request.body.resourceStartingTolerance)
     ) {
         return ctx.utils.error(400, 'Invalid Request - missing parameters');
@@ -269,7 +268,6 @@ async function handleMonitor(ctx: Context) {
     //Prepare body input
     let cfg = {
         restarterSchedule: ctx.request.body.restarterSchedule.split(',').map((x: string) => x.trim()),
-        disableChatWarnings: (ctx.request.body.disableChatWarnings === 'true'),
         resourceStartingTolerance: ctx.request.body.resourceStartingTolerance,
     };
 
@@ -284,7 +282,6 @@ async function handleMonitor(ctx: Context) {
     //Preparing & saving config
     const newConfig = globals.configVault.getScopedStructure('monitor');
     newConfig.restarterSchedule = validRestartTimes.map(t => t.string);
-    newConfig.disableChatWarnings = cfg.disableChatWarnings;
     newConfig.resourceStartingTolerance = cfg.resourceStartingTolerance;
     const saveStatus = globals.configVault.saveProfile('monitor', newConfig);
 
@@ -335,7 +332,11 @@ async function handleDiscord(ctx: Context) {
     try {
         generateStatusMessage(globals.txAdmin, cfg.embedJson, cfg.embedConfigJson);
     } catch (error) {
-        return ctx.send({ type: 'danger', message: `<strong>Saving embed config failed:</strong> ${(error as Error).message}` });
+        return ctx.send({
+            type: 'danger',
+            markdown: true,
+            message: `**Embed validation failed:**\n${(error as Error).message}`,
+        });
     }
 
     //Preparing & saving config
@@ -355,10 +356,29 @@ async function handleDiscord(ctx: Context) {
             await discordBot.refreshConfig();
             return ctx.send({
                 type: 'success',
-                message: '<strong>Discord configuration saved!</strong><br>\nIf <em>(and only if)</em> the status embed is not being updated, check the System Logs page and make sure there are no embed errors.'
+                markdown: true,
+                message: `**Discord configuration saved!**
+                If <em>(and only if)</em> the status embed is not being updated, check the System Logs page and make sure there are no embed errors.`
             });
         } catch (error) {
-            return ctx.send({ type: 'danger', message: `<strong>Error starting the bot:</strong> ${(error as Error).message}` });
+            const errorCode = (error as any).code;
+            let extraContext;
+            if (errorCode === 'DisallowedIntents' || errorCode === 4014) {
+                extraContext = `**The bot requires the \`GUILD_MEMBERS\` intent.**
+                - Go to the Dev Portal (<https://discord.com/developers/applications>)
+                - Navigate to \`Bot > Privileged Gateway Intents\`.
+                - Enable the \`GUILD_MEMBERS\` intent.
+                - Save on the dev portal.
+                - Go to the \`txAdmin > Settings > Discord Bot\` and press save.`;
+            } else if (errorCode === 'CustomNoGuild') {
+                extraContext = `This probably means the bot is not in the guild you are trying to use.
+                Please invite the bot to the guild and try again.`;
+            }
+            return ctx.send({
+                type: 'danger',
+                markdown: true,
+                message: `**Error starting the bot:** ${(error as Error).message}\n${extraContext}`
+            });
         }
 
     } else {
@@ -380,6 +400,10 @@ async function handleMenu(ctx: Context) {
         isUndefined(ctx.request.body.menuEnabled)
         || isUndefined(ctx.request.body.menuAlignRight)
         || isUndefined(ctx.request.body.menuPageKey)
+        || isUndefined(ctx.request.body.hideDefaultAnnouncement)
+        || isUndefined(ctx.request.body.hideDefaultDirectMessage)
+        || isUndefined(ctx.request.body.hideDefaultWarning)
+        || isUndefined(ctx.request.body.hideDefaultScheduledRestartWarning)
     ) {
         return ctx.utils.error(400, 'Invalid Request - missing parameters');
     }
@@ -389,6 +413,10 @@ async function handleMenu(ctx: Context) {
         menuEnabled: (ctx.request.body.menuEnabled === 'true'),
         menuAlignRight: (ctx.request.body.menuAlignRight === 'true'),
         menuPageKey: ctx.request.body.menuPageKey.trim(),
+        hideDefaultAnnouncement: (ctx.request.body.hideDefaultAnnouncement === 'true'),
+        hideDefaultDirectMessage: (ctx.request.body.hideDefaultDirectMessage === 'true'),
+        hideDefaultWarning: (ctx.request.body.hideDefaultWarning === 'true'),
+        hideDefaultScheduledRestartWarning: (ctx.request.body.hideDefaultScheduledRestartWarning === 'true'),
     };
 
     //Preparing & saving config
@@ -396,6 +424,10 @@ async function handleMenu(ctx: Context) {
     newConfig.menuEnabled = cfg.menuEnabled;
     newConfig.menuAlignRight = cfg.menuAlignRight;
     newConfig.menuPageKey = cfg.menuPageKey;
+    newConfig.hideDefaultAnnouncement = cfg.hideDefaultAnnouncement;
+    newConfig.hideDefaultDirectMessage = cfg.hideDefaultDirectMessage;
+    newConfig.hideDefaultWarning = cfg.hideDefaultWarning;
+    newConfig.hideDefaultScheduledRestartWarning = cfg.hideDefaultScheduledRestartWarning;
     const saveStatus = globals.configVault.saveProfile('global', newConfig);
 
     //Sending output
