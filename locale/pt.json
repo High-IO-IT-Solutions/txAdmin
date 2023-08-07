@@ -7,10 +7,10 @@
         "start_timeout": "não iniciou a tempo",
         "crash_detected": "crash detectado",
         "hang_detected": "congelamento detectado",
-        "partial_hang_warn": "Devido a um congelamento parcial, este servidor será reiniciado em 1 minuto. Por favor se disconecte agora.",
+        "partial_hang_warn": "Devido a um congelamento parcial, este servidor será reiniciado em 1 minuto. Por favor, desconecte-se agora.",
         "partial_hang_warn_discord": "Devido a um congelamento parcial, **%{servername}** será reiniciado em 1 minuto.",
         "schedule_reason": "agendado para %{time}",
-        "schedule_warn": "Este servidor está agendado para reiniciar em %{smart_count} minuto. Por favor se disconecte agora. |||| Este servidor está agendado para reiniciar em %{smart_count} minutos.",
+        "schedule_warn": "Este servidor está agendado para reiniciar em %{smart_count} minuto. Por favor, desconecte-se agora! |||| Este servidor está agendado para reiniciar em %{smart_count} minutos.",
         "schedule_warn_discord": "**%{servername}** está agendado para reiniciar em %{smart_count} minuto. |||| **%{servername}** está agendado para reiniciar em %{smart_count} minutos."
     },
     "ban_messages": {
@@ -24,7 +24,8 @@
             "label_author": "Autor",
             "label_reason": "Motivo",
             "label_id": "ID do ban",
-            "note_multiple_bans": "Nota: você tem mais de um ban ativo em seus ids."
+            "note_multiple_bans": "Nota: você tem mais de um ban ativo em seus ids.",
+            "note_diff_license": "Nota: o ban acima foi aplicado em outra <code>license</code>, o que significa que um de seus IDs/HWIDs condiz com algum deste ban."
         }
     },
     "whitelist_messages": {
@@ -35,13 +36,13 @@
         },
         "guild_member": {
             "mode_title": "Este servidor está em modo <strong>Whitelist por Discord</strong>.",
-            "insufficient_ids": "Você não tem um ID <code>discord</code>, que é necessário para validar se você entrou no nosso Discord. Por favor abra o Discord e tente novamente.",
+            "insufficient_ids": "Você não tem um ID <code>discord</code>, que é necessário para validar se você entrou no nosso Discord. Por favor abra o Discord Desktop e tente novamente (a versão Web não vai funcionar).",
             "deny_title": "Você precisa entrar em nosso Discord para poder se conectar.",
             "deny_message": "Por favor entre no %{guildname} e tente novamente."
         },
         "guild_roles": {
             "mode_title": "Este servidor está em modo <strong>Whitelist por grupo de Discord</strong>.",
-            "insufficient_ids": "Você não tem um ID <code>discord</code>, que é necessário para validar se você entrou no nosso Discord. Por favor abra o Discord e tente novamente.",
+            "insufficient_ids": "Você não tem um ID <code>discord</code>, que é necessário para validar se você entrou no nosso Discord. Por favor abra o Discord Desktop e tente novamente (a versão Web não vai funcionar).",
             "deny_notmember_title": "Você precisa entrar em nosso Discord para poder se conectar.",
             "deny_notmember_message": "Por favor entre no %{guildname}, adquira um dos grupos necessários e tente novamente.",
             "deny_noroles_title": "Você não tem um dos grupos de Discord necessários para se conectar.",
@@ -69,7 +70,8 @@
     "nui_menu": {
         "misc": {
             "help_message": "txAdmin Menu habilitado, digite /tx para abri-lo.\nVocê também pode configurar uma tecla atalho [Configurações do jogo > Key Bindings > FiveM > Menu: Open Main Page].",
-            "menu_not_allowed": "Seus IDs não estão cadastrados como administrador no txAdmin.\nSe você tiver acesso ao txAdmin web, acesse a página Admin Manager e adicione seus IDs pro seu usuário.",
+            "menu_not_admin": "Seus IDs não estão cadastrados como administrador no txAdmin.\nSe você tiver acesso ao txAdmin web, acesse a página Admin Manager e adicione seus IDs pro seu usuário.",
+            "menu_auth_failed": "A autenticação do menu falhou com motivo: %{reason}",
             "no_perms": "Você não tem permissão para esta atividade.",
             "unknown_error": "Ocorreu um erro inesperado.",
             "not_enabled": "O menu do txAdmin não está habilitado! Você pode habilita-lo na página de configurações do txAdmin web.",
@@ -169,7 +171,8 @@
                     "label": "Aumenta as caracterísiticas do veículo para atingir máxima diversão (e talvez velocidade)",
                     "success": "Nitro adicionado!",
                     "already_boosted": "Esse carro já tem nitro.",
-                    "unsupported_class": "Esta classe de veículo não é suportada."
+                    "unsupported_class": "Esta classe de veículo não é suportada.",
+                    "redm_not_mounted": "Você só pode usar \"nitro\" se estiver montado em um cavalo."
                 }
             },
             "heal": {
@@ -286,7 +289,8 @@
                         "bring_player": "Trazendo o jogador",
                         "spectate_failed": "Erro ao resolver o alvo! Cancelando modo observar.",
                         "spectate_yourself": "Você não pode observar você mesmo.",
-                        "freeze_yourself": "Você não pode congelar você mesmo."
+                        "freeze_yourself": "Você não pode congelar você mesmo.",
+                        "spectate_cycle_failed": "Não há mais players para observar."
                     }
                 },
                 "troll": {
@@ -343,7 +347,8 @@
             },
             "ids": {
                 "current_ids": "IDs atuais",
-                "previous_ids": "IDs usados anteriormente"
+                "previous_ids": "IDs usados anteriormente",
+                "all_hwids": "Todos IDs de Hardware"
             }
         }
     }

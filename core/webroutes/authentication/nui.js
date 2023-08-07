@@ -1,6 +1,6 @@
 const modulename = 'WebServer:NUI';
-import logger from '@core/extras/console.js';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 /**
  * Return the permissions for the NUI auth.
@@ -9,8 +9,8 @@ const { dir, log, logOk, logWarn, logError } = logger(modulename);
  */
 export default async function nuiAuth(ctx) {
     ctx.utils.logAction('logged in via in-game ui');
-    globals.databus.txStatsData.login.origins.webpipe++;
-    globals.databus.txStatsData.login.methods.nui++;
+    globals?.statisticsManager.loginOrigins.count('webpipe');
+    globals?.statisticsManager.loginMethods.count('nui');
 
     ctx.send({
         isAdmin: true,

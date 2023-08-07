@@ -35,6 +35,8 @@ import { arrayRandom } from "../../utils/miscUtils";
 import { copyToClipboard } from "../../utils/copyToClipboard";
 import { useServerCtxValue } from "../../state/server.state";
 import { VehicleMode, useVehicleMode } from "../../state/vehiclemode.state";
+import { useIsRedmValue } from "@nui/src/state/isRedm.state";
+import { getVehicleSpawnDialogData, vehiclePlaceholderReplacer } from "@nui/src/utils/vehicleSpawnDialogHelper";
 
 const fadeHeight = 20;
 const listHeight = 388;
@@ -80,6 +82,7 @@ export const MainPageList: React.FC = () => {
   const [healMode, setHealMode] = useHealMode();
   const serverCtx = useServerCtxValue();
   const menuVisible = useIsMenuVisibleValue();
+  const isRedm = useIsRedmValue()
 
   //FIXME: this is so the menu resets multi selectors when we close it
   // but it is not working, and when I do this the first time we press
@@ -134,30 +137,30 @@ export const MainPageList: React.FC = () => {
       description: t("nui_menu.page_main.teleport.coords.dialog_desc"),
       placeholder: "340, 480, 12",
       onSubmit: (coords: string) => {
-        // TODO: accept X, Y and calculate Z
-        // TODO: accept heading
         // Testing examples:
         // {x: -1; y: 2; z:3}
         // {x = -1.01; y= 2.02; z=3.03}
         // -1, 2, 3
-        const [x, y, z] = Array.from(
-          coords.matchAll(/-?\d{1,4}(?:\.\d{1,9})?/g),
+        // 474.08966064453, -1718.7073974609, 29.329517364502
+        let [x, y, z] = Array.from(
+          coords.matchAll(/-?\d{1,4}(?:\.\d+)?/g),
           (m) => parseFloat(m[0])
         );
-
-        if ([x, y, z].every((n) => typeof n === "number")) {
-          enqueueSnackbar(t("nui_menu.page_main.teleport.generic_success"), {
-            variant: "success",
-          });
-          fetchNui("tpToCoords", { x, y, z });
-        } else {
-          enqueueSnackbar(
+        if (typeof x !== 'number' || typeof y !== 'number') {
+          return enqueueSnackbar(
             t("nui_menu.page_main.teleport.coords.dialog_error"),
-            {
-              variant: "error",
-            }
+            { variant: "error" }
           );
         }
+        if (typeof z !== 'number') {
+          z = 0;
+        }
+
+        enqueueSnackbar(
+          t("nui_menu.page_main.teleport.generic_success"),
+          { variant: "success" }
+        );
+        fetchNui("tpToCoords", { x, y, z });
       },
     });
   };
@@ -192,49 +195,18 @@ export const MainPageList: React.FC = () => {
       });
     }
 
+    const dialogData = getVehicleSpawnDialogData(isRedm);
     openDialog({
       title: t("nui_menu.page_main.vehicle.spawn.dialog_title"),
       description: t("nui_menu.page_main.vehicle.spawn.dialog_desc"),
-      placeholder: "car, bike, heli, boat, Adder, Buzzard, etc",
+      placeholder: 'any vehicle model or ' + dialogData.shortcuts.join(', '),
+      suggestions: dialogData.shortcuts,
       onSubmit: (modelName: string) => {
-        modelName = modelName.trim().toLowerCase();
-        if (modelName === "car") {
-          modelName =
-            Math.random() < 0.05
-              ? "caddy"
-              : arrayRandom([
-                  "comet2",
-                  "coquette",
-                  "trophytruck",
-                  "issi5",
-                  "f620",
-                  "nero",
-                  "sc1",
-                  "toros",
-                  "tyrant",
-                ]);
-        } else if (modelName === "bike") {
-          modelName =
-            Math.random() < 0.05
-              ? "bmx"
-              : arrayRandom(["esskey", "nemesis", "sanchez"]);
-        } else if (modelName === "heli") {
-          modelName =
-            Math.random() < 0.05
-              ? "havok"
-              : arrayRandom(["buzzard2", "volatus"]);
-        } else if (modelName === "boat") {
-          modelName =
-            Math.random() < 0.05
-              ? "seashark"
-              : arrayRandom(["dinghy", "toro2"]);
-        }
+        modelName = vehiclePlaceholderReplacer(modelName, dialogData.shortcutsData);
         fetchNui("spawnVehicle", { model: modelName }).then(({ e }) => {
           e
             ? enqueueSnackbar(
-                t("nui_menu.page_main.vehicle.spawn.dialog_error", {
-                  modelName,
-                }),
+                t("nui_menu.page_main.vehicle.spawn.dialog_error", { modelName }),
                 { variant: "error" }
               )
             : enqueueSnackbar(
@@ -336,10 +308,17 @@ export const MainPageList: React.FC = () => {
   };
 
   const handleClearArea = () => {
+    if (isRedm) {
+      return enqueueSnackbar(
+        'This option is not yet available for RedM.',
+        { variant: "error" }
+      );
+    }
     openDialog({
       title: t("nui_menu.page_main.clear_area.title"),
       description: t("nui_menu.page_main.clear_area.dialog_desc"),
       placeholder: "300",
+      suggestions: ['50', '150', '300'],
       onSubmit: (msg) => {
         const parsedRadius = parseInt(msg);
 
@@ -583,7 +562,7 @@ export const MainPageList: React.FC = () => {
       //   onSelect: handleSpawnWeapon,
       // },
     ],
-    [playerMode, teleportMode, vehicleMode, healMode, serverCtx]
+    [playerMode, teleportMode, vehicleMode, healMode, serverCtx, isRedm]
   );
 
   return (

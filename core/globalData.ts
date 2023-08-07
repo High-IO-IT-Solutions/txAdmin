@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import slash from 'slash';
 
-import logger from '@core/extras/console.js';
-const { dir, log, logOk, logWarn, logError } = logger();
+import consoleFactory, { setConsoleEnvData } from '@extras/console';
+const console = consoleFactory();
 
 
 /**
@@ -12,7 +12,7 @@ const { dir, log, logOk, logWarn, logError } = logger();
  */
 const cleanPath = (x: string) => { return slash(path.normalize(x)); };
 const logDie = (x: string) => {
-    logError(x);
+    console.error(x);
     process.exit(1);
 };
 const getBuild = (ver: any) => {
@@ -60,11 +60,12 @@ const resourceName = GetCurrentResourceName();
 //4574 = add resource field to PRINT_STRUCTURED_TRACE
 //5894 = CREATE_VEHICLE_SERVER_SETTER
 //6185 = added ScanResourceRoot (not yet in use)
+//6508 = unhandledRejection is now handlable, we need this due to discord.js's bug
 const minFXServerVersion = 5894;
 const fxServerVersion = getBuild(getConvarString('version'));
 if (fxServerVersion === 9999) {
-    logError('It looks like you are running a custom build of fxserver.');
-    logError('And because of that, there is no guarantee that txAdmin will work properly.');
+    console.error('It looks like you are running a custom build of fxserver.');
+    console.error('And because of that, there is no guarantee that txAdmin will work properly.');
 } else if (!fxServerVersion) {
     logDie(`This version of FXServer is NOT compatible with txAdmin. Please update it to build ${minFXServerVersion} or above. (version convar not set or in the wrong format)`);
 } else if (fxServerVersion < minFXServerVersion) {
@@ -91,7 +92,7 @@ const citizenRootConvar = getConvarString('citizen_root');
 if (!citizenRootConvar) {
     logDie('citizen_root convar not set');
 }
-const fxServerPath = cleanPath(citizenRootConvar);
+const fxServerPath = cleanPath(citizenRootConvar as string);
 
 //Setting data path
 let dataPath;
@@ -114,12 +115,12 @@ try {
 //      There was also an issue with the slash() lib and with the +exec on FXServer
 const nonASCIIRegex = /[^\x00-\x80]+/;
 if (nonASCIIRegex.test(fxServerPath) || nonASCIIRegex.test(dataPath)) {
-    logError('Due to environmental restrictions, your paths CANNOT contain non-ASCII characters.');
-    logError('Example of non-ASCII characters: çâýå, ρέθ, ñäé, ēļæ, глж, เซิร์, 警告.');
-    logError('Please make sure FXServer is not in a path contaning those characters.');
-    logError(`If on windows, we suggest you moving the artifact to "C:/fivemserver/${fxServerVersion}/".`);
-    log(`FXServer path: ${fxServerPath}`);
-    log(`txData path: ${dataPath}`);
+    console.error('Due to environmental restrictions, your paths CANNOT contain non-ASCII characters.');
+    console.error('Example of non-ASCII characters: çâýå, ρέθ, ñäé, ēļæ, глж, เซิร์, 警告.');
+    console.error('Please make sure FXServer is not in a path contaning those characters.');
+    console.error(`If on windows, we suggest you moving the artifact to "C:/fivemserver/${fxServerVersion}/".`);
+    console.log(`FXServer path: ${fxServerPath}`);
+    console.log(`txData path: ${dataPath}`);
     process.exit(1);
 }
 
@@ -134,17 +135,25 @@ const debugExternalSource = getConvarString('txDebugExternalSource');
 
 
 /**
- * Convars - ZAP dependant
+ * Host type check
  */
 //Checking for ZAP Configuration file
 const zapCfgFile = path.join(dataPath, 'txAdminZapConfig.json');
-let zapCfgData, isZapHosting, forceInterface, forceFXServerPort, txAdminPort, loginPageLogo, defaultMasterAccount, deployerDefaults;
+let isZapHosting: boolean;
+let forceInterface;
+let forceFXServerPort;
+let txAdminPort;
+let loginPageLogo;
+let defaultMasterAccount;
+let deployerDefaults;
 const loopbackInterfaces = ['::1', '127.0.0.1', '127.0.1.1'];
+const isPterodactyl = !isWindows && process.env?.TXADMIN_ENABLE === '1';
 if (fs.existsSync(zapCfgFile)) {
-    log('Loading ZAP-Hosting configuration file.');
+    isZapHosting = !isPterodactyl;
+    console.log('Loading ZAP-Hosting configuration file.');
+    let zapCfgData;
     try {
         zapCfgData = JSON.parse(fs.readFileSync(zapCfgFile, 'utf8'));
-        isZapHosting = true;
         forceInterface = zapCfgData.interface;
         forceFXServerPort = zapCfgData.fxServerPort;
         txAdminPort = zapCfgData.txAdminPort;
@@ -193,10 +202,20 @@ if (fs.existsSync(zapCfgFile)) {
     } else {
         if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(txAdminInterfaceConvar)) logDie('txAdminInterface is not valid.');
         forceInterface = txAdminInterfaceConvar;
+        loopbackInterfaces.push(forceInterface);
     }
 }
-if (verboseConvar) dir({ isZapHosting, forceInterface, forceFXServerPort, txAdminPort, loginPageLogo, deployerDefaults });
+if (verboseConvar) {
+    console.dir({ isPterodactyl, isZapHosting, forceInterface, forceFXServerPort, txAdminPort, loginPageLogo, deployerDefaults });
+}
 
+//Setting the variables in console without it having to importing from here (cyclical dependency)
+setConsoleEnvData(
+    txAdminVersion,
+    txAdminResourcePath as string,
+    isDevMode,
+    verboseConvar
+);
 
 /**
  * Exports
@@ -217,6 +236,7 @@ export const convars = Object.freeze({
     debugPlayerlistGenerator,
     debugExternalSource,
     //Convars - zap dependant
+    isPterodactyl,
     isZapHosting,
     forceInterface,
     forceFXServerPort,
@@ -226,10 +246,3 @@ export const convars = Object.freeze({
     deployerDefaults,
     loopbackInterfaces,
 });
-
-//Verbosity can change during execution
-//FIXME: move this to console.js
-export let verbose = verboseConvar;
-export const setVerbose = (state: boolean) => {
-    verbose = !!state;
-}

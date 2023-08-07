@@ -99,7 +99,6 @@ export default (config) => {
     router.get('/systemLog', requestAuth('web'), webRoutes.systemLog);
     router.get('/serverLog', requestAuth('web'), webRoutes.serverLog);
     router.get('/serverLog/partial', requestAuth('api'), webRoutes.serverLogPartial);
-    router.get('/status/:scope?', requestAuth('api'), webRoutes.status);
     router.get('/chartData/:thread?', chartDataLimiter, webRoutes.chartData);
     router.post('/database/:action', requestAuth('api'), webRoutes.databaseActions);
 
@@ -143,6 +142,11 @@ export default (config) => {
         router.get('/dev/:scope', webRoutes.dev_get);
         router.post('/dev/:scope', webRoutes.dev_post);
     };
+
+    //Insights page mock
+    // router.get('/insights', (ctx) => {
+    //     return ctx.utils.render('main/insights', { headerTitle: 'Insights' });
+    // });
 
     //Return router
     return router;

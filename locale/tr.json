@@ -24,34 +24,35 @@
             "label_author": "Yasaklayan",
             "label_reason": "Yasaklanma Sebebi",
             "label_id": "Ban ID",
-            "note_multiple_bans": "Not: Tanımlayıcılarınız üzerinde birden fazla aktif yasağınız var."
+            "note_multiple_bans": "Not: Tanımlayıcılarınız üzerinde birden fazla aktif yasağınız var.",
+            "note_diff_license": "Note: the ban above was applied for another <code>license</code>, which means some of your IDs/HWIDs match the ones associated with that ban."
         }
     },
     "whitelist_messages": {
         "admin_only": {
-            "mode_title": "This server is in <strong>Admin-only</strong> mode.",
-            "insufficient_ids": "You do not have <code>discord</code> or <code>fivem</code> identifiers, and at least one of them is required to validate if you are a txAdmin administrator.",
-            "deny_message": "Your identifiers are not assigned to any txAdmin administrator."
+            "mode_title": "Bu sunucu <strong>Sadece-Yetkili</strong> modundunadır.",
+            "insufficient_ids": "<code>discord</code> veya <code>fivem</code> tanımlayıcısına sahip değilsiniz, en az bir tanesi sizin bir txAdmin yöneticisi olup olmadığınızı doğrulamak için gereklidir.",
+            "deny_message": "Tanımlayıcılarınız herhangi bir txAdmin yöneticisine ait değildir."
         },
         "guild_member": {
-            "mode_title": "This server is in <strong>Discord Guild Member Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
-            "deny_title": "You are required to join our Discord Guild to connect.",
-            "deny_message": "Please join the guild %{guildname} then try again."
+            "mode_title": "Bu sunucu <strong>Discord Üye Beyaz Listesi</strong> modundunadır.",
+            "insufficient_ids": "<code>discord</code> tanımlayıcısına sahip değilsiniz, Discord Sunucusuna katılıp katılmadığınızı doğrulamak için gereklidir. Please open the Discord Desktop app and try again (the Web app won't work).",
+            "deny_title": "Bağlanmak için Discord Sunucumuzda bulunmanız gerekiyor.",
+            "deny_message": "Lütfen %{guildname} sunucumuza katılın ve tekrar deneyin."
         },
         "guild_roles": {
-            "mode_title": "This server is in <strong>Discord Role Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
-            "deny_notmember_title": "You are required to join our Discord Guild to connect.",
-            "deny_notmember_message": "Please join %{guildname}, get one of the required roles, then try again.",
-            "deny_noroles_title": "You do not have a whitelisted role required to join.",
-            "deny_noroles_message": "To join this server you are required to have at least one of the whitelisted roles on the guild %{guildname}."
+            "mode_title": "Bu sunucu <strong>Discord Rol Beyaz Listesi</strong> modunda.",
+            "insufficient_ids": "<code>discord</code> tanımlayıcısına sahip değilsiniz, Discord Sunucusuna katılıp katılmadığınızı doğrulamak için gereklidir. Please open the Discord Desktop app and try again (the Web app won't work).",
+            "deny_notmember_title": "Bağlanmak için Discord Sunucumuzda bulunmanız gerekiyor.",
+            "deny_notmember_message": "Lütfen %{guildname} sunucumuzda bulunun, gerekli rollerden birini alın ve tekrar deneyin",
+            "deny_noroles_title": "Katılmak için beyaz listelenmiş bir role sahip değilsiniz.",
+            "deny_noroles_message": "Bu sunucuya katılmak için %{guildname} sunucumuzda beyaz listelenmiş rollerden en az birine sahip olmanız gerekiyor."
         },
         "approved_license": {
-            "mode_title": "This server is in <strong>License Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>license</code> identifier, which means the server has <code>sv_lan</code> enabled. If you are the server owner, you can disable it in the <code>server.cfg</code> file.",
-            "deny_title": "You are not whitelisted to join this server.",
-            "request_id_label": "Request ID"
+            "mode_title": "Bu sunucu <strong>Lisans Beyaz Listesi</strong> modunda.",
+            "insufficient_ids": "<code>license</code> tanımlayıcısına sahip değilsiniz, bu sunucunun <code>sv_lan</code> özelliği etkinleştirilmiş demektir. Sunucu sahibiyseniz, <code>server.cfg</code> dosyasında devre dışı bırakabilirsiniz.",
+            "deny_title": "Bu sunucuya katılmak için beyaz listeli değilsiniz.",
+            "request_id_label": "Talep ID"
         }
     },
     "server_actions": {
@@ -69,7 +70,8 @@
     "nui_menu": {
         "misc": {
             "help_message": "txAdmin Menüsü etkinleştirildi, açmak için /tx yazın.\nAyrıca [Oyun Ayarları > Tuş Bağlantıları > FiveM > Menü: Ana Sayfayı Aç] öğesinde bir tuş ataması yapılandırabilirsiniz.",
-            "menu_not_allowed": "Tanımlayıcılarınız, txAdmin'de kayıtlı herhangi bir yöneticiyle eşleşmiyor.\ntxAdmin'de kayıtlıysanız, Admin Manager'e gidin ve tanımlayıcılarınızın kaydedildiğinden emin olun.",
+            "menu_not_admin": "Tanımlayıcılarınız, txAdmin'de kayıtlı herhangi bir yöneticiyle eşleşmiyor.\ntxAdmin'de kayıtlıysanız, Admin Manager'e gidin ve tanımlayıcılarınızın kaydedildiğinden emin olun.",
+            "menu_auth_failed": "txAdmin Menu authentication failed with reason: %{reason}",
             "no_perms": "Bu izne sahip değilsiniz.",
             "unknown_error": "Bilinmeyen bir hata oluştu.",
             "not_enabled": "txAdmin Menüsü etkin değil! Bunu txAdmin ayarları sayfasından etkinleştirebilirsiniz.",
@@ -106,9 +108,9 @@
                     "success": "Tanrı modu etkinleştirilmiş"
                 },
                 "superjump": {
-                    "title": "Super Jump",
-                    "label": "Toggle super jump mode, the player will also run faster",
-                    "success": "Super Jump enabled"
+                    "title": "Süper Zıplama",
+                    "label": "Süper Zıplama modunu aç/kapat, oyuncu aynı zamanda daha hızlı koşacaktır",
+                    "success": "Süper Zıplama etkinleştirilmiş"
                 },
                 "normal": {
                     "title": "Normal",
@@ -169,7 +171,8 @@
                     "label": "Maksimum eğlenceye (ve belki de hıza) ulaşmak için arabayı güçlendirin",
                     "success": "Araç güçlendirildi!",
                     "already_boosted": "This vehicle was already boosted.",
-                    "unsupported_class": "This vehicle class is not supported."
+                    "unsupported_class": "This vehicle class is not supported.",
+                    "redm_not_mounted": "You can only boost when mounted on a horse."
                 }
             },
             "heal": {
@@ -286,7 +289,8 @@
                         "bring_player": "Oyuncu yanınıza ışınlandı",
                         "spectate_failed": "Hedef çözülemedi! İzlemeden çıkıldı.",
                         "spectate_yourself": "Kendini izleyemezsiniz.",
-                        "freeze_yourself": "Kendini donduramazsın."
+                        "freeze_yourself": "Kendini donduramazsın.",
+                        "spectate_cycle_failed": "There are no players to cycle to."
                     }
                 },
                 "troll": {
@@ -343,7 +347,8 @@
             },
             "ids": {
                 "current_ids": "Geçerli Tanımlayıcılar",
-                "previous_ids": "Daha Önce Kullanılan Tanımlayıcılar"
+                "previous_ids": "Daha Önce Kullanılan Tanımlayıcılar",
+                "all_hwids": "All Hardware IDs"
             }
         }
     }

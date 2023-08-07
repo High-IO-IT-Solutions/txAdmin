@@ -1,10 +1,11 @@
 const modulename = 'DynamicAds';
 import xss from 'xss';
 import defaultAds from '../../dynamicAds.json';
-import { verbose } from '@core/globalData';
-import logger from '@core/extras/console.js';
 import got from '@core/extras/got.js';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+import { convars } from '@core/globalData';
+const console = consoleFactory(modulename);
+
 
 //Helper
 const cleanAds = (ads) => {
@@ -24,10 +25,18 @@ export default class DynamicAds {
         this.adOptions = false;
 
         //Set default ads
-        if (Array.isArray(defaultAds.login) && Array.isArray(defaultAds.main)) {
+        let loginAds, mainAds;
+        if(convars.isZapHosting){
+            loginAds = defaultAds.loginZap;
+            mainAds = defaultAds.mainZap;
+        } else {
+            loginAds = defaultAds.login;
+            mainAds = defaultAds.main;
+        }
+        if (Array.isArray(loginAds) && Array.isArray(mainAds)) {
             this.adOptions = {
-                login: cleanAds(defaultAds.login),
-                main: cleanAds(defaultAds.main),
+                login: cleanAds(loginAds),
+                main: cleanAds(mainAds),
             };
         }
 
@@ -46,10 +55,18 @@ export default class DynamicAds {
         const indexURL = 'https://raw.githubusercontent.com/tabarra/txAdmin/master/dynamicAds.json';
         try {
             const res = await got(indexURL).json();
-            if (Array.isArray(defaultAds.login) && Array.isArray(defaultAds.main)) {
+            let loginAds, mainAds;
+            if(convars.isZapHosting){
+                loginAds = res.loginZap;
+                mainAds = res.mainZap;
+            } else {
+                loginAds = res.login;
+                mainAds = res.main;
+            }
+            if (Array.isArray(loginAds) && Array.isArray(mainAds)) {
                 this.adOptions = {
-                    login: cleanAds(res.login),
-                    main: cleanAds(res.main),
+                    login: cleanAds(loginAds),
+                    main: cleanAds(mainAds),
                 };
                 this.adIndex = {
                     login: 0,
@@ -57,7 +74,7 @@ export default class DynamicAds {
                 };
             }
         } catch (error) {
-            if (verbose) logWarn(`Failed to retrieve dynamic ads with error: ${error.message}`);
+            console.verbose.warn(`Failed to retrieve dynamic ads with error: ${error.message}`);
         }
     }
 

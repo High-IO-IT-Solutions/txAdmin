@@ -24,7 +24,8 @@
             "label_author": "Banned by",
             "label_reason": "Ban Reason",
             "label_id": "Ban ID",
-            "note_multiple_bans": "Note: you have more than one active ban on your identifiers."
+            "note_multiple_bans": "Note: you have more than one active ban on your identifiers.",
+            "note_diff_license": "Note: the ban above was applied for another <code>license</code>, which means some of your IDs/HWIDs match the ones associated with that ban."
         }
     },
     "whitelist_messages": {
@@ -35,13 +36,13 @@
         },
         "guild_member": {
             "mode_title": "This server is in <strong>Discord Guild Member Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
+            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open the Discord Desktop app and try again (the Web app won't work).",
             "deny_title": "You are required to join our Discord Guild to connect.",
             "deny_message": "Please join the guild %{guildname} then try again."
         },
         "guild_roles": {
             "mode_title": "This server is in <strong>Discord Role Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
+            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open the Discord Desktop app and try again (the Web app won't work).",
             "deny_notmember_title": "You are required to join our Discord Guild to connect.",
             "deny_notmember_message": "Please join %{guildname}, get one of the required roles, then try again.",
             "deny_noroles_title": "You do not have a whitelisted role required to join.",
@@ -69,7 +70,8 @@
     "nui_menu": {
         "misc": {
             "help_message": "Meniul txAdmin este activat, Scrie /tx pentru a îl deschide.\nPoți reconfigura keybind-ul utilizând [Game Settings > Key Bindings > FiveM > Menu: Open Main Page].",
-            "menu_not_allowed": "Identificatorii dvs. nu se potrivesc cu niciun administrator înregistrat pe txAdmin.\nDacă sunteți înregistrat pe txAdmin, accesați Admin Manager și asigurați-vă că identificatorii dvs. bine configurați.",
+            "menu_not_admin": "Identificatorii dvs. nu se potrivesc cu niciun administrator înregistrat pe txAdmin.\nDacă sunteți înregistrat pe txAdmin, accesați Admin Manager și asigurați-vă că identificatorii dvs. bine configurați.",
+            "menu_auth_failed": "txAdmin Menu authentication failed with reason: %{reason}",
             "no_perms": "Nu ai această permisie.",
             "unknown_error": "A apărut o eroare necunoscută.",
             "not_enabled": "Meniul txAdmin nu este activat! Puteți să o activați din pagina de setări txAdmin.",
@@ -169,7 +171,8 @@
                     "label": "Boost the car to achieve max fun (and maybe speed)",
                     "success": "Vehicle boosted!",
                     "already_boosted": "This vehicle was already boosted.",
-                    "unsupported_class": "This vehicle class is not supported."
+                    "unsupported_class": "This vehicle class is not supported.",
+                    "redm_not_mounted": "You can only boost when mounted on a horse."
                 }
             },
             "heal": {
@@ -286,7 +289,8 @@
                         "bring_player": "Teleportarea jucătorului",
                         "spectate_failed": "Nu a reușit comunicarea cu jucătorul! Ieșire din spectatori.",
                         "spectate_yourself": "Nu poți fi spectator tu însuți.",
-                        "freeze_yourself": "Nu te poți îngheța."
+                        "freeze_yourself": "Nu te poți îngheța.",
+                        "spectate_cycle_failed": "There are no players to cycle to."
                     }
                 },
                 "troll": {
@@ -343,7 +347,8 @@
             },
             "ids": {
                 "current_ids": "Current Identifiers",
-                "previous_ids": "Previously Used Identifiers"
+                "previous_ids": "Previously Used Identifiers",
+                "all_hwids": "All Hardware IDs"
             }
         }
     }

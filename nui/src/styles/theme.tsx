@@ -1,8 +1,6 @@
-import { createTheme } from "@mui/material";
-
-declare module "@mui/material/styles" {}
-
-export const MenuTheme = createTheme({
+export default {
+  name: 'fivem',
+  logo: 'images/txadmin.png',
   palette: {
     mode: "dark",
     primary: {
@@ -31,8 +29,8 @@ export const MenuTheme = createTheme({
       main: "#fff",
     },
     text: {
-      secondary: "rgba(221,221,221,0.54)",
       primary: "#fff",
+      secondary: "rgba(221,221,221,0.54)",
     },
   },
   components: {
@@ -47,4 +45,4 @@ export const MenuTheme = createTheme({
     },
     MuiPaper: { styleOverrides: { root: { backgroundImage: "unset" } } },
   },
-});
+} as const;

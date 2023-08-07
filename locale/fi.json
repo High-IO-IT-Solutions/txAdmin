@@ -17,14 +17,15 @@
         "kick_temporary": "(%{author}) Olet saanut porttikiellon palvelimelle. Porttikiellon syy: \"%{reason}\". Porttikielto päättyy: %{expiration}.",
         "kick_permanent": "(%{author}) Olet saanut pysyvän porttikiellon palvelimelle. Porttikiellon syy: \"%{reason}\".",
         "reject": {
-            "title_permanent": "You have been permanently banned from this server.",
-            "title_temporary": "You have been temporarily banned from this server.",
-            "label_expiration": "Your ban will expire in",
-            "label_date": "Ban Date",
-            "label_author": "Banned by",
-            "label_reason": "Ban Reason",
-            "label_id": "Ban ID",
-            "note_multiple_bans": "Note: you have more than one active ban on your identifiers."
+            "title_permanent": "Olet saanut ikuisen porttikiellon palvelimelle.",
+            "title_temporary": "Olet saanut porttikiellon palvelimelle.",
+            "label_expiration": "Porttikieltosi päättyy",
+            "label_date": "Porttikiellon päivämäärä",
+            "label_author": "Porttikiellon antanut",
+            "label_reason": "Porttikiellon syy",
+            "label_id": "Porttikiellon ID",
+            "note_multiple_bans": "Huom: you have more than one active ban on your identifiers.",
+            "note_diff_license": "Note: the ban above was applied for another <code>license</code>, which means some of your IDs/HWIDs match the ones associated with that ban."
         }
     },
     "whitelist_messages": {
@@ -35,13 +36,13 @@
         },
         "guild_member": {
             "mode_title": "This server is in <strong>Discord Guild Member Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
+            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open the Discord Desktop app and try again (the Web app won't work).",
             "deny_title": "You are required to join our Discord Guild to connect.",
             "deny_message": "Please join the guild %{guildname} then try again."
         },
         "guild_roles": {
             "mode_title": "This server is in <strong>Discord Role Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
+            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open the Discord Desktop app and try again (the Web app won't work).",
             "deny_notmember_title": "You are required to join our Discord Guild to connect.",
             "deny_notmember_message": "Please join %{guildname}, get one of the required roles, then try again.",
             "deny_noroles_title": "You do not have a whitelisted role required to join.",
@@ -69,13 +70,14 @@
     "nui_menu": {
         "misc": {
             "help_message": "txAdmin Menu päällä. Kirjoita /tx avataksesi.\nVoit myös asettaa menulle oman näppäimen: [Game Settings > Key Bindings > FiveM > Menu: Open Main Page].",
-            "menu_not_allowed": "Tietosi eivät vastaa yhtäkään txAdminiin rekisteröityä ylläpitäjää.\nMikäli olet rekisteröitynyt txAdminiin, siirry kohtaan [Admin Manager] ja varmista että tietosi ovat tallennettu.",
+            "menu_not_admin": "Tietosi eivät vastaa yhtäkään txAdminiin rekisteröityä ylläpitäjää.\nMikäli olet rekisteröitynyt txAdminiin, siirry kohtaan [Admin Manager] ja varmista että tietosi ovat tallennettu.",
+            "menu_auth_failed": "txAdmin Menu authentication failed with reason: %{reason}",
             "no_perms": "Sinulla ei ole oikeuksia tähän.",
             "unknown_error": "Tuntematon virhe",
             "not_enabled": "txAdmin Menu ei ole käytössä! Voit ottaa sen käyttöön txAdminin asetuksista.",
             "announcement_title": "Palvelinilmoitus henkilöltä %{author}:",
             "dialog_empty_input": "Tekstikenttä ei voi olla tyhjä.",
-            "directmessage_title": "DM from admin %{author}:"
+            "directmessage_title": "Yksityisviesti ylläpitäjältä %{author}:"
         },
         "frozen": {
             "froze_player": "Pelaaja jäädytety!",
@@ -165,11 +167,12 @@
                     "success": "Ajoneuvo poistettu!"
                 },
                 "boost": {
-                    "title": "Boost",
-                    "label": "Boost the car to achieve max fun (and maybe speed)",
-                    "success": "Vehicle boosted!",
-                    "already_boosted": "This vehicle was already boosted.",
-                    "unsupported_class": "This vehicle class is not supported."
+                    "title": "Viritä",
+                    "label": "Viritä ajoneuvosi",
+                    "success": "Ajoneuvo viritetty!",
+                    "already_boosted": "Ajoneuvo on jo viritetty.",
+                    "unsupported_class": "Tätä ajoneuvoluokkaa ei voi virittää.",
+                    "redm_not_mounted": "You can only boost when mounted on a horse."
                 }
             },
             "heal": {
@@ -286,7 +289,8 @@
                         "bring_player": "Tuodaan pelaaja",
                         "spectate_failed": "Virhe kohteen tavoittamisessa!",
                         "spectate_yourself": "Et voi katsoa itseäsi.",
-                        "freeze_yourself": "Et voi jäädyttää itseäsi."
+                        "freeze_yourself": "Et voi jäädyttää itseäsi.",
+                        "spectate_cycle_failed": "There are no players to cycle to."
                     }
                 },
                 "troll": {
@@ -305,24 +309,24 @@
                 "joined": "Liittynyt",
                 "whitelisted_label": "Whitelisted",
                 "whitelisted_notyet": "not yet",
-                "btn_wl_add": "ADD WL",
-                "btn_wl_remove": "REMOVE WL",
-                "btn_wl_success": "Whitelist status changed.",
+                "btn_wl_add": "ANNA WL",
+                "btn_wl_remove": "POISTA WL",
+                "btn_wl_success": "Whitelistin tila vaihdettu.",
                 "log_label": "Log",
-                "log_empty": "No bans/warns found.",
-                "log_ban_count": "%{smart_count} ban |||| %{smart_count} bans",
-                "log_warn_count": "%{smart_count} warn |||| %{smart_count} warns",
-                "log_btn": "DETAILS",
-                "notes_changed": "Player note changed.",
-                "notes_placeholder": "Notes about this player..."
+                "log_empty": "Porttikieltoja/varoituksia ei löytynyt.",
+                "log_ban_count": "%{smart_count} porttikielto |||| %{smart_count} porttikieltoa",
+                "log_warn_count": "%{smart_count} varoitus |||| %{smart_count} varoitusta",
+                "log_btn": "LISÄTIEDOT",
+                "notes_changed": "Pelaajan merkintöjä muutettu.",
+                "notes_placeholder": "Merkintöjä pelaajasta..."
             },
             "history": {
                 "title": "Historia",
-                "btn_revoke": "REVOKE",
-                "revoked_success": "Action revoked!",
-                "banned_by": "BANNED by %{author}",
-                "warned_by": "WARNED by %{author}",
-                "revoked_by": "Revoked by %{author}.",
+                "btn_revoke": "KUMOA",
+                "revoked_success": "Tapahtuma kumottu!",
+                "banned_by": "PORTTIKIELLON antanut %{author}",
+                "warned_by": "VAROITUKSEN antanut %{author}",
+                "revoked_by": "Kumonnut %{author}.",
                 "expired_at": "Expired at %{date}.",
                 "expires_at": "Expires at %{date}."
             },
@@ -335,15 +339,16 @@
                 "weeks": "viikko(a)",
                 "months": "kuukautta",
                 "permanent": "Ikuinen",
-                "custom": "Custom",
+                "custom": "Mukautettu",
                 "helper_text": "Aseta porttikiellon kesto",
                 "submit": "Aseta porttikielto",
-                "reason_required": "The Reason field is required.",
-                "success": "Player banned!"
+                "reason_required": "Syötäthän porttikiellon syyn",
+                "success": "Pelaaja asetettu porttikieltoon!"
             },
             "ids": {
-                "current_ids": "Current Identifiers",
-                "previous_ids": "Previously Used Identifiers"
+                "current_ids": "Nykyiset tunnisteet",
+                "previous_ids": "Aiemmin käytetyt tunnisteet",
+                "all_hwids": "All Hardware IDs"
             }
         }
     }

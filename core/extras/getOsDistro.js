@@ -1,10 +1,10 @@
 const modulename = 'getOsDistro';
-import logger from '@core/extras/console.js';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 /*
     NOTE: this is straight from @sindresorhus/windows-release, but with async functions.
-            I have windows-release dependency mostly just so I know when there are updates to it.
+    I have windows-release dependency mostly just so I know when there are updates to it.
 */
 import os from 'node:os';
 import execa from 'execa';
@@ -89,7 +89,7 @@ export default async () => {
             const distro = await windowsReleaseAsync();
             _osDistro = `Windows ${distro}`;
         } catch (error) {
-            logWarn(`Failed to detect windows version with error: ${error.message}`);
+            console.warn(`Failed to detect windows version with error: ${error.message}`);
             _osDistro = `Windows Unknown`;
         }
     }

@@ -1,10 +1,10 @@
 const modulename = 'ConfigVault';
 import fs from 'node:fs';
 import { cloneDeep } from 'lodash-es';
-import logger from '@core/extras/console.js';
-import { verbose } from '@core/globalData';
 import { defaultEmbedJson, defaultEmbedConfigJson } from '@core/components/DiscordBot/defaultJsons';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
+
 
 //Helper functions
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
@@ -55,7 +55,7 @@ export default class ConfigVault {
             this.config = this.setupConfigDefaults(this.configFile);
             this.setupFolderStructure();
         } catch (error) {
-            logError(error.message);
+            console.error(error.message);
             process.exit(0);
         }
     }
@@ -80,7 +80,7 @@ export default class ConfigVault {
         try {
             cfgData = JSON.parse(rawFile);
         } catch (error) {
-            if (rawFile.includes('\\')) logError(`Note: your 'txData/${this.serverProfile}/config.json' file contains '\\', make sure all your paths use only '/'.`);
+            if (rawFile.includes('\\')) console.error(`Note: your 'txData/${this.serverProfile}/config.json' file contains '\\', make sure all your paths use only '/'.`);
             throw new Error(`Unable to load configuration file '${this.configFilePath}'. \nOriginal error: ${error.message}`);
         }
 
@@ -136,6 +136,7 @@ export default class ConfigVault {
                     cfg.playerDatabase.whitelistRejectionMessage,
                     'Please join http://discord.gg/example and request to be whitelisted.',
                 ),
+                requiredBanHwidMatches: toDefault(cfg.playerDatabase.requiredBanHwidMatches, 1),
                 banRejectionMessage: toDefault(
                     cfg.playerDatabase.banRejectionMessage,
                     'You can join http://discord.gg/example to appeal this ban.',
@@ -162,6 +163,7 @@ export default class ConfigVault {
                 onesync: toDefault(cfg.fxRunner.onesync, null),
                 autostart: toDefault(cfg.fxRunner.autostart, null),
                 restartDelay: toDefault(cfg.fxRunner.restartDelay, null), //not in template
+                shutdownNoticeDelay: toDefault(cfg.fxRunner.shutdownNoticeDelay, null), //not in template
                 quiet: toDefault(cfg.fxRunner.quiet, null),
             };
 
@@ -173,8 +175,16 @@ export default class ConfigVault {
             if (out.global.language === 'pt_PT' || out.global.language === 'pt_BR') {
                 out.global.language = 'pt';
             }
+
+            //Fixing resourceStartingTolerance being saved as string
+            if (typeof out.monitor.resourceStartingTolerance === 'string') {
+                out.monitor.resourceStartingTolerance = parseInt(out.monitor.resourceStartingTolerance);
+                if (isNaN(out.monitor.resourceStartingTolerance)) {
+                    out.monitor.resourceStartingTolerance = 120;
+                }
+            }
         } catch (error) {
-            if (verbose) dir(error);
+            console.verbose.dir(error);
             throw new Error(`Malformed configuration file! Make sure your txAdmin is updated!\nOriginal error: ${error.message}`);
         }
 
@@ -221,6 +231,7 @@ export default class ConfigVault {
             cfg.playerDatabase.whitelistMode = cfg.playerDatabase.whitelistMode || 'disabled';
             cfg.playerDatabase.whitelistedDiscordRoles = cfg.playerDatabase.whitelistedDiscordRoles || [];
             cfg.playerDatabase.whitelistRejectionMessage = cfg.playerDatabase.whitelistRejectionMessage || '';
+            cfg.playerDatabase.requiredBanHwidMatches = parseInt(cfg.playerDatabase.requiredBanHwidMatches) ?? 1;
             cfg.playerDatabase.banRejectionMessage = cfg.playerDatabase.banRejectionMessage || '';
 
             //WebServer
@@ -236,10 +247,11 @@ export default class ConfigVault {
             //FXRunner
             cfg.fxRunner.logPath = cfg.fxRunner.logPath || `${this.serverProfilePath}/logs/fxserver.log`; //not in template
             cfg.fxRunner.autostart = (cfg.fxRunner.autostart === 'true' || cfg.fxRunner.autostart === true);
-            cfg.fxRunner.restartDelay = parseInt(cfg.fxRunner.restartDelay) || 1250; //not in template
+            cfg.fxRunner.restartDelay = parseInt(cfg.fxRunner.restartDelay) || 750; //not in template
+            cfg.fxRunner.shutdownNoticeDelay = parseInt(cfg.fxRunner.shutdownNoticeDelay) || 5; //not in template
             cfg.fxRunner.quiet = (cfg.fxRunner.quiet === 'true' || cfg.fxRunner.quiet === true);
         } catch (error) {
-            if (verbose) dir(error);
+            console.verbose.dir(error);
             throw new Error(`Malformed configuration file! Make sure your txAdmin is updated.\nOriginal error: ${error.message}`);
         }
 
@@ -263,7 +275,7 @@ export default class ConfigVault {
                 fs.mkdirSync(logsPath);
             }
         } catch (error) {
-            logError(`Failed to set up folder structure in '${this.serverProfilePath}/' with error: ${error.message}`);
+            console.error(`Failed to set up folder structure in '${this.serverProfilePath}/' with error: ${error.message}`);
             process.exit();
         }
     }
@@ -321,17 +333,11 @@ export default class ConfigVault {
      * @param {string} newConfig
      */
     saveProfile(scope, newConfig) {
-        try {
-            let toSave = cloneDeep(this.configFile);
-            toSave[scope] = newConfig;
-            toSave = removeNulls(toSave);
-            fs.writeFileSync(this.configFilePath, JSON.stringify(toSave, null, 2), 'utf8');
-            this.configFile = toSave;
-            this.config = this.setupConfigDefaults(this.configFile);
-            return true;
-        } catch (error) {
-            dir(error);
-            return false;
-        }
+        let toSave = cloneDeep(this.configFile);
+        toSave[scope] = newConfig;
+        toSave = removeNulls(toSave);
+        fs.writeFileSync(this.configFilePath, JSON.stringify(toSave, null, 2), 'utf8');
+        this.configFile = toSave;
+        this.config = this.setupConfigDefaults(this.configFile);
     }
 };

@@ -8,8 +8,8 @@ import StreamZip from 'node-stream-zip';
 import { cloneDeep, escapeRegExp }  from 'lodash-es';
 import mysql from 'mysql2/promise';
 import got from '@core/extras/got.js';
-import logger from '@core/extras/console.js';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 
 //Helper functions
@@ -109,7 +109,12 @@ const taskDownloadGithub = async (options, basePath, deployerCtx) => {
     if (options.ref) {
         reference = options.ref;
     } else {
-        const data = await got.get(`https://api.github.com/repos/${repoOwner}/${repoName}`, { timeout: 15e3 }).json();
+        const data = await got.get(
+            `https://api.github.com/repos/${repoOwner}/${repoName}`,
+            {
+                timeout: { request: 15e3 }
+            }
+        ).json();
         if (typeof data !== 'object' || !data.default_branch) {
             throw new Error('reference not set, and wasn ot able to detect using github\'s api');
         }
@@ -449,7 +454,7 @@ const taskFailTest = async (options, basePath, deployerCtx) => {
 const taskDumpVars = async (options, basePath, deployerCtx) => {
     const toDump = cloneDeep(deployerCtx);
     toDump.dbConnection = (toDump.dbConnection && toDump.dbConnection.constructor && toDump.dbConnection.constructor.name) ? toDump.dbConnection.constructor.name : undefined;
-    dir(toDump);
+    console.dir(toDump);
 };
 
 

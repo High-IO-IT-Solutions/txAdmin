@@ -1,9 +1,8 @@
 const modulename = 'WebServer:ProviderCallback';
 import crypto from 'node:crypto';
-import logger, { ogConsole } from '@core/extras/console.js';
-import { verbose } from '@core/globalData';
 import { isValidRedirectPath } from '@core/extras/helpers';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
@@ -55,7 +54,7 @@ export default async function ProviderCallback(ctx) {
         const currentURL = ctx.protocol + '://' + ctx.get('host') + `/auth/${provider}/callback`;
         tokenSet = await globals.adminVault.providers.citizenfx.processCallback(ctx, currentURL, ctx.session._sessCtx.externalKey);
     } catch (error) {
-        logWarn(`Code Exchange error: ${error.message}`);
+        console.warn(`Code Exchange error: ${error.message}`);
         if (!isUndefined(error.tolerance)) {
             return returnJustMessage(
                 ctx,
@@ -84,7 +83,7 @@ export default async function ProviderCallback(ctx) {
     try {
         userInfo = await globals.adminVault.providers.citizenfx.getUserInfo(tokenSet.access_token);
     } catch (error) {
-        if (verbose) logError(`Get UserInfo error: ${error.message}`);
+        console.verbose.error(`Get UserInfo error: ${error.message}`);
         return returnJustMessage(ctx, 'Get UserInfo error:', error.message);
     }
 
@@ -121,13 +120,13 @@ export default async function ProviderCallback(ctx) {
         await globals.adminVault.refreshAdminSocialData(admin.name, 'citizenfx', identifier, userInfo);
 
         ctx.utils.logAction(`logged in from ${ctx.ip} via citizenfx`);
-        globals.databus.txStatsData.login.origins[ctx.txVars.hostType]++;
-        globals.databus.txStatsData.login.methods.citizenfx++;
+        globals?.statisticsManager.loginOrigins.count(ctx.txVars.hostType);
+        globals?.statisticsManager.loginMethods.count('citizenfx');
         const redirectPath = (isValidRedirectPath(ctx.session?.socialLoginRedirect)) ? ctx.session.socialLoginRedirect : '/';
         return ctx.response.redirect(redirectPath);
     } catch (error) {
         ctx.session.auth = {};
-        if (verbose) logError(`Failed to login: ${error.message}`);
+        console.verbose.error(`Failed to login: ${error.message}`);
         return returnJustMessage(ctx, 'Failed to login:', error.message);
     }
 };

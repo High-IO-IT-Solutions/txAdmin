@@ -1,12 +1,12 @@
 const modulename = 'WebServer:DatabaseActions';
 import { GenericApiResp } from '@shared/genericApiTypes';
-import logger from '@core/extras/console.js';
 import { Context } from 'koa';
 import { DatabaseActionType } from '@core/components/PlayerDatabase/databaseTypes';
 import { calcExpirationFromDuration } from '@core/extras/helpers';
 import consts from '@core/extras/consts';
 import humanizeDuration, { Unit } from 'humanize-duration';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const anyUndefined = (...args: any) => { return [...args].some((x) => (typeof x === 'undefined')); };
@@ -39,6 +39,7 @@ export default async function DatabaseActions(ctx: Context) {
 /**
  * Handle Ban Player IDs (legacy ban!)
  * This is only called from the players page, where you ban an ID array instead of a PlayerClass
+ * Doesn't support HWIDs, only banning player does
  */
 async function handleBandIds(ctx: Context, sess: any): Promise<GenericApiResp> {
     //Checking request & identifiers
@@ -130,6 +131,7 @@ async function handleBandIds(ctx: Context, sess: any): Promise<GenericApiResp> {
             durationTranslated,
             targetNetId: null,
             targetIds: identifiers,
+            targetHwids: [],
             targetName: 'identifiers',
             kickMessage,
         });
@@ -178,7 +180,8 @@ async function handleRevokeAction(ctx: Context, sess: any): Promise<GenericApiRe
             actionReason: action.reason,
             actionAuthor: action.author,
             playerName: action.playerName,
-            playerIds: action.identifiers,
+            playerIds: action.ids,
+            playerHwids: action.hwids ?? [],
             revokedBy: sess.auth.username,
         });
     } catch (error) { }

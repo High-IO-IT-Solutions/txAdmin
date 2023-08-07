@@ -5,9 +5,8 @@ import slash from 'slash';
 import { Deployer, validateTargetPath, parseValidateRecipe } from '@core/extras/deployer';
 import { validateFixServerConfig, findLikelyCFGPath } from '@core/extras/fxsConfigHelper';
 import got from '@core/extras/got.js';
-import logger from '@core/extras/console.js';
-import { verbose } from '@core/globalData';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
@@ -24,7 +23,7 @@ const getPotentialServerDataFolders = (source) => {
             .filter((dirent) => getDirectories(path.join(source, dirent)).includes('resources'))
             .map((dirent) => slash(path.join(source, dirent)) + '/');
     } catch (error) {
-        if (verbose) logWarn(`Failed to find server data folder with message: ${error.message}`);
+        console.verbose.warn(`Failed to find server data folder with message: ${error.message}`);
         return [];
     }
 };
@@ -97,7 +96,6 @@ export default async function SetupPost(ctx) {
 };
 
 
-//================================================================
 /**
  * Handle Validation of a remote recipe/template URL
  * @param {object} ctx
@@ -113,7 +111,7 @@ async function handleValidateRecipeURL(ctx) {
     try {
         const recipeText = await got.get({
             url: recipeURL,
-            timeout: 4500,
+            timeout: { request: 4500 }
         }).text();
         if (typeof recipeText !== 'string') throw new Error('This URL did not return a string.');
         const recipe = parseValidateRecipe(recipeText);
@@ -124,7 +122,6 @@ async function handleValidateRecipeURL(ctx) {
 }
 
 
-//================================================================
 /**
  * Handle Validation of a remote recipe/template URL
  * @param {object} ctx
@@ -145,7 +142,6 @@ async function handleValidateLocalDeployPath(ctx) {
 }
 
 
-//================================================================
 /**
  * Handle Validation of Local (existing) Server Data Folder
  * @param {object} ctx
@@ -207,7 +203,6 @@ async function handleValidateLocalDataFolder(ctx) {
 }
 
 
-//================================================================
 /**
  * Handle Validation of CFG File
  * @param {object} ctx
@@ -240,7 +235,6 @@ async function handleValidateCFGFile(ctx) {
 }
 
 
-//================================================================
 /**
  * Handle Save settings for local server data imports
  * Actions: sets serverDataPath/cfgPath, starts the server, redirect to live console
@@ -275,39 +269,40 @@ async function handleSaveLocal(ctx) {
     //Preparing & saving config
     const newGlobalConfig = globals.configVault.getScopedStructure('global');
     newGlobalConfig.serverName = cfg.name;
-    const saveGlobalStatus = globals.configVault.saveProfile('global', newGlobalConfig);
-
     const newFXRunnerConfig = globals.configVault.getScopedStructure('fxRunner');
     newFXRunnerConfig.serverDataPath = cfg.dataFolder;
     newFXRunnerConfig.cfgPath = cfg.cfgFile;
-    const saveFXRunnerStatus = globals.configVault.saveProfile('fxRunner', newFXRunnerConfig);
+    try {
+        globals.configVault.saveProfile('global', newGlobalConfig);
+        globals.configVault.saveProfile('fxRunner', newFXRunnerConfig);
+    } catch (error) {
+        console.warn(`[${ctx.session.auth.username}] Error changing global/fxserver settings via setup stepper.`);
+        console.verbose.dir(error);
+        return ctx.send({
+            type: 'danger',
+            markdown: true,
+            message: `**Error saving the configuration file:** ${error.message}`
+        });
+    }
 
+    //Refreshing config
+    globals.config = globals.configVault.getScoped('global');
+    globals.fxRunner.refreshConfig();
+    globals.persistentCache.set('deployer:recipe', 'none');
 
-    //Sending output
-    if (saveGlobalStatus && saveFXRunnerStatus) {
-        //Refreshing config
-        globals.config = globals.configVault.getScoped('global');
-        globals.fxRunner.refreshConfig();
+    //Logging
+    ctx.utils.logAction('Changing global/fxserver settings via setup stepper.');
 
-        //Logging
-        ctx.utils.logAction('Changing global/fxserver settings via setup stepper.');
-
-        //Starting server
-        const spawnMsg = await globals.fxRunner.spawnServer(false);
-        if (spawnMsg !== null) {
-            return ctx.send({success: false, markdown: true, message: spawnMsg});
-        } else {
-            return ctx.send({success: true});
-        }
+    //Starting server
+    const spawnMsg = await globals.fxRunner.spawnServer(false);
+    if (spawnMsg !== null) {
+        return ctx.send({success: false, markdown: true, message: spawnMsg});
     } else {
-        logWarn(`[${ctx.session.auth.username}] Error changing global/fxserver settings via setup stepper.`);
-        return ctx.send({success: false, markdown: true, message: '**Error saving the configuration file.**'});
+        return ctx.send({success: true});
     }
 }
 
 
-
-//================================================================
 /**
  * Handle Save settings for remote recipe importing
  * Actions: download recipe, globals.deployer = new Deployer(recipe)
@@ -335,12 +330,29 @@ async function handleSaveDeployerImport(ctx) {
     try {
         recipeText = await got.get({
             url: recipeURL,
-            timeout: 4500,
+            timeout: { request: 4500 }
         }).text();
         if (typeof recipeText !== 'string') throw new Error('This URL did not return a string.');
     } catch (error) {
         return ctx.send({success: false, message: `Recipe download error: ${error.message}`});
     }
+
+    //Preparing & saving config
+    const newGlobalConfig = globals.configVault.getScopedStructure('global');
+    newGlobalConfig.serverName = serverName;
+    try {
+        globals.configVault.saveProfile('global', newGlobalConfig);
+    } catch (error) {
+        console.warn(`[${ctx.session.auth.username}] Error changing global settings via setup stepper.`);
+        console.verbose.dir(error);
+        return ctx.send({
+            type: 'danger',
+            markdown: true,
+            message: `**Error saving the configuration file:** ${error.message}`
+        });
+    }
+    globals.config = globals.configVault.getScoped('global');
+    ctx.utils.logAction('Changing global settings via setup stepper and started Deployer.');
 
     //Start deployer (constructor will validate the recipe)
     try {
@@ -348,25 +360,10 @@ async function handleSaveDeployerImport(ctx) {
     } catch (error) {
         return ctx.send({success: false, message: error.message});
     }
-
-    //Preparing & saving config
-    const newGlobalConfig = globals.configVault.getScopedStructure('global');
-    newGlobalConfig.serverName = serverName;
-    const saveGlobalStatus = globals.configVault.saveProfile('global', newGlobalConfig);
-
-    //Checking save and redirecting
-    if (saveGlobalStatus) {
-        globals.config = globals.configVault.getScoped('global');
-        ctx.utils.logAction('Changing global settings via setup stepper and started Deployer.');
-        return ctx.send({success: true});
-    } else {
-        logWarn(`[${ctx.session.auth.username}] Error changing global settings via setup stepper.`);
-        return ctx.send({success: false, message: '<strong>Error saving the configuration file.</strong>'});
-    }
+    return ctx.send({success: true});
 }
 
 
-//================================================================
 /**
  * Handle Save settings for custom recipe
  * Actions: download recipe, globals.deployer = new Deployer(recipe)
@@ -384,30 +381,33 @@ async function handleSaveDeployerCustom(ctx) {
     const serverName = ctx.request.body.name.trim();
     const targetPath = slash(path.normalize(ctx.request.body.targetPath + '/'));
     const deploymentID = ctx.request.body.deploymentID;
+
+    //Preparing & saving config
+    const newGlobalConfig = globals.configVault.getScopedStructure('global');
+    newGlobalConfig.serverName = serverName;
+    try {
+        globals.configVault.saveProfile('global', newGlobalConfig);
+    } catch (error) {
+        console.warn(`[${ctx.session.auth.username}] Error changing global settings via setup stepper.`);
+        console.verbose.dir(error);
+        return ctx.send({
+            type: 'danger',
+            markdown: true,
+            message: `**Error saving the configuration file:** ${error.message}`
+        });
+    }
+    globals.config = globals.configVault.getScoped('global');
+    ctx.utils.logAction('Changing global settings via setup stepper and started Deployer.');
+
+    //Start deployer (constructor will create the recipe template)
     const customMetaData = {
         author: ctx.session.auth.username,
         serverName,
     };
-
-    //Start deployer (constructor will create the recipe template)
     try {
         globals.deployer = new Deployer(false, deploymentID, targetPath, false, customMetaData);
     } catch (error) {
         return ctx.send({success: false, message: error.message});
     }
-
-    //Preparing & saving config
-    const newGlobalConfig = globals.configVault.getScopedStructure('global');
-    newGlobalConfig.serverName = serverName;
-    const saveGlobalStatus = globals.configVault.saveProfile('global', newGlobalConfig);
-
-    //Checking save and redirecting
-    if (saveGlobalStatus) {
-        globals.config = globals.configVault.getScoped('global');
-        ctx.utils.logAction('Changing global settings via setup stepper and started Deployer.');
-        return ctx.send({success: true});
-    } else {
-        logWarn(`[${ctx.session.auth.username}] Error changing global settings via setup stepper.`);
-        return ctx.send({success: false, message: '<strong>Error saving the configuration file.</strong>'});
-    }
+    return ctx.send({success: true});
 }

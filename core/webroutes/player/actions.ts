@@ -1,12 +1,12 @@
 const modulename = 'WebServer:PlayerActions';
 import humanizeDuration, { Unit } from 'humanize-duration';
-import logger from '@core/extras/console.js';
 import { Context } from 'koa';
 import playerResolver from '@core/playerLogic/playerResolver';
 import { GenericApiResp } from '@shared/genericApiTypes';
 import { PlayerClass, ServerPlayer } from '@core/playerLogic/playerClasses';
 import { anyUndefined, calcExpirationFromDuration } from '@core/extras/helpers';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 
 /**
@@ -139,7 +139,7 @@ async function handleWarning(ctx: Context, sess: any, player: PlayerClass): Prom
  * Handle Banning command
  */
 async function handleBan(ctx: Context, sess: any, player: PlayerClass): Promise<GenericApiResp> {
-    //Checking request & identifiers
+    //Checking request
     if (
         anyUndefined(
             ctx.request.body,
@@ -166,8 +166,9 @@ async function handleBan(ctx: Context, sess: any, player: PlayerClass): Promise<
         return { error: 'You don\'t have permission to execute this action.' }
     }
 
-    //Validating player
+    //Validating player - hwids.length can be zero 
     const allIds = player.getAllIdentifiers();
+    const allHwids = player.getAllHardwareIdentifiers();
     if (!allIds.length) {
         return { error: 'Cannot ban a player with no identifiers.' }
     }
@@ -181,7 +182,8 @@ async function handleBan(ctx: Context, sess: any, player: PlayerClass): Promise<
             sess.auth.username,
             reason,
             expiration,
-            player.displayName
+            player.displayName,
+            allHwids
         );
     } catch (error) {
         return { error: `Failed to ban player: ${(error as Error).message}` };
@@ -223,6 +225,7 @@ async function handleBan(ctx: Context, sess: any, player: PlayerClass): Promise<
         durationTranslated,
         targetNetId: (player instanceof ServerPlayer) ? player.netid : null,
         targetIds: player.ids,
+        targetHwids: player.hwids,
         targetName: player.displayName,
         kickMessage,
     });

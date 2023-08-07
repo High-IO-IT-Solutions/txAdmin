@@ -1,12 +1,15 @@
 const modulename = 'WebServer:PlayerListSearch';
 import Fuse from "fuse.js";
 import consts from '@core/extras/consts';
-import logger from '@core/extras/console.js';
-import { verbose } from '@core/globalData';
 import cleanPlayerName from '@core/../shared/cleanPlayerName';
 import { cloneDeep } from 'lodash-es';
 import { processActionList, processPlayerList } from './processor';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
+
+//Helper const
+const joinedValidIDKeys = Object.keys(consts.validIdentifiers).join('|');
+const idsRegex = new RegExp(`((${joinedValidIDKeys}):\\w+)`, 'g');
 
 
 /**
@@ -38,8 +41,6 @@ export default async function PlayerListSearch(ctx) {
 
     try {
         //Getting valid identifiers
-        const joinedValidIDKeys = Object.keys(consts.validIdentifiers).join('|');
-        const idsRegex = new RegExp(`((${joinedValidIDKeys}):\\w+)`, 'g');
         const idsArray = [...searchString.matchAll(idsRegex)]
             .map((x) => x[0])
             .filter((e, i, arr) => {
@@ -49,7 +50,7 @@ export default async function PlayerListSearch(ctx) {
         //IF searching for identifiers
         if (idsArray.length) {
             const actions = await dbo.chain.get('actions')
-                .filter((a) => idsArray.some((fi) => a.identifiers.includes(fi)))
+                .filter((a) => idsArray.some((fi) => a.ids.includes(fi)))
                 .take(512)
                 .cloneDeep()
                 .value();
@@ -75,7 +76,7 @@ export default async function PlayerListSearch(ctx) {
                 outData.resActions = await processActionList([action]);
 
                 const players = await dbo.chain.get('players')
-                    .filter((p) => action.identifiers.some((fi) => p.ids.includes(fi)))
+                    .filter((p) => action.ids.some((fi) => p.ids.includes(fi)))
                     .take(512)
                     .cloneDeep()
                     .value();
@@ -101,10 +102,8 @@ export default async function PlayerListSearch(ctx) {
         //Give output
         return ctx.send(outData);
     } catch (error) {
-        if (verbose) {
-            logError(`handleSearch failed with error: ${error.message}`);
-            dir(error);
-        }
+        console.verbose.error(`handleSearch failed with error: ${error.message}`);
+        console.verbose.dir(error);
         return ctx.send({error: `Search failed with error: ${error.message}`});
     }
 };

@@ -24,7 +24,8 @@
             "label_author": "Gebanned Door",
             "label_reason": "Ban Reden",
             "label_id": "Ban ID",
-            "note_multiple_bans": "Opmerking: U hebt meer dan één actieve ban op uw Identifiers."
+            "note_multiple_bans": "Opmerking: U hebt meer dan één actieve ban op uw Identifiers.",
+            "note_diff_license": "Opmerking: de bovenstaande ban werd toegepast voor een andere <code>license</code>, wat betekent dat sommige van jouw IDs/HWIDs matchen met degene die zijn geassocieerd met die ban."
         }
     },
     "whitelist_messages": {
@@ -35,13 +36,13 @@
         },
         "guild_member": {
             "mode_title": "Deze server is in <strong>Discord Guild Member Whitelist</strong> modus.",
-            "insufficient_ids": "Je hebt niet de <code>discord</code> identifier, welke is vereist om te valideren of jij onze Discord Guild bent gejoind. Open Discord en probeer het opnieuw.",
+            "insufficient_ids": "Je hebt niet de <code>discord</code> identifier, welke is vereist om te valideren of jij onze Discord Guild bent gejoind. Please open the Discord Desktop app and try again (the Web app won't work).",
             "deny_title": "Je moet onze Discord Guild joinen om verbinding te maken.",
             "deny_message": "Join de guild %{guildname}, probeer het daarna opnieuw."
         },
         "guild_roles": {
             "mode_title": "Deze server is in <strong>Discord Role Whitelist</strong> modus.",
-            "insufficient_ids": "Je hebt niet de <code>discord</code> identifier, welke is vereist om te valideren of jij onze Discord Guild bent gejoind. Open Discord en probeer het opnieuw.",
+            "insufficient_ids": "Je hebt niet de <code>discord</code> identifier, welke is vereist om te valideren of jij onze Discord Guild bent gejoind. Please open the Discord Desktop app and try again (the Web app won't work).",
             "deny_notmember_title": "Je moet onze Discord Guild joinen om verbinding te maken.",
             "deny_notmember_message": "Join %{guildname}, krijg een van de vereiste roles, probeer het daarna opnieuw.",
             "deny_noroles_title": "Je hebt geen whitelisted role die vereist is om te joinen.",
@@ -69,7 +70,8 @@
     "nui_menu": {
         "misc": {
             "help_message": "txAdmin Menu ingeschakeld, type /tx om het te openen.\nJe kan ook een keybind registreren in [Game Settings > Key Bindings > FiveM > Menu: Open Main Page].",
-            "menu_not_allowed": "Jouw identifiers zijn niet gelijk aan degenen die in txAdmin zijn geregistreerd.\nAls je wel geregistreerd staat bij txAdmin, ga naar Admin Manager en sla je identifiers op.",
+            "menu_not_admin": "Jouw identifiers zijn niet gelijk aan degenen die in txAdmin zijn geregistreerd.\nAls je wel geregistreerd staat bij txAdmin, ga naar Admin Manager en sla je identifiers op.",
+            "menu_auth_failed": "txAdmin Menu authentication failed with reason: %{reason}",
             "no_perms": "Je hebt hier geen permissie voor.",
             "unknown_error": "Er is een onbekende error opgetreden.",
             "not_enabled": "Het txAdmin Menu is uitgeschakeld! Je kan hem inschakelen bij de txAdmin instellingen pagina.",
@@ -106,9 +108,9 @@
                     "success": "God Mode ingeschakeld"
                 },
                 "superjump": {
-                    "title": "Super Jump",
-                    "label": "Toggle super jump mode, the player will also run faster",
-                    "success": "Super Jump enabled"
+                    "title": "SuperJump",
+                    "label": "Schakel de supersprongmodus in, de speler zal ook sneller rennen",
+                    "success": "SuperJump ingeschakeld"
                 },
                 "normal": {
                     "title": "Normaal",
@@ -169,7 +171,8 @@
                     "label": "Voer het voertuig op voor maximaal plezier (en misschien snelheid)",
                     "success": "Voertuig opgevoerd!",
                     "already_boosted": "Dit voertuig is al opgevoerd.",
-                    "unsupported_class": "Deze voertuigklasse wordt niet ondersteund."
+                    "unsupported_class": "Deze voertuigklasse wordt niet ondersteund.",
+                    "redm_not_mounted": "You can only boost when mounted on a horse."
                 }
             },
             "heal": {
@@ -286,7 +289,8 @@
                         "bring_player": "Speler aan het brengen",
                         "spectate_failed": "Kon de speler niet vinden! Spectate aan het afsluiten.",
                         "spectate_yourself": "Je kan jezelf niet spectaten.",
-                        "freeze_yourself": "Je kan jezelf niet freezen."
+                        "freeze_yourself": "Je kan jezelf niet freezen.",
+                        "spectate_cycle_failed": "There are no players to cycle to."
                     }
                 },
                 "troll": {
@@ -343,7 +347,8 @@
             },
             "ids": {
                 "current_ids": "Huidige Identifiers",
-                "previous_ids": "Eerder gebruikte Identifiers"
+                "previous_ids": "Eerder gebruikte Identifiers",
+                "all_hwids": "All Hardware IDs"
             }
         }
     }

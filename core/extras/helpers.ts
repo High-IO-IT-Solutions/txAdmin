@@ -54,7 +54,7 @@ export const parseSchedule = (scheduleTimes: string[]) => {
 export const redactApiKeys = (src: string) => {
     if (typeof src !== 'string' || !src.length) return src;
     return src
-        .replace(/licenseKey\s+["']?(cfxk_\w{1,60}_\w{1,20}|\w{32})["']?/gi, 'licenseKey [REDACTED]')
+        .replace(/licenseKey\s+["']?cfxk_\w{1,60}_(\w+)["']?/gi, 'licenseKey [REDACTED cfxk...$1]')
         .replace(/steam_webApiKey\s+["']?\w{32}["']?/gi, 'steam_webApiKey [REDACTED]')
         .replace(/sv_tebexSecret\s+["']?\w{40}["']?/gi, 'sv_tebexSecret [REDACTED]')
         .replace(/rcon_password\s+["']?[^"']+["']?/gi, 'rcon_password [REDACTED]')
@@ -154,6 +154,25 @@ export const parsePlayerIds = (ids: string[]) => {
     }
 
     return { invalidIdsArray, validIdsArray, validIdsObject };
+}
+
+/**
+ * Get valid and invalid player HWIDs
+ */
+export const filterPlayerHwids = (hwids: string[]) => {
+    let invalidHwidsArray: string[] = [];
+    let validHwidsArray: string[] = [];
+
+    for (const hwidString of hwids) {
+        if (typeof hwidString !== 'string') continue;
+        if (consts.regexValidHwidToken.test(hwidString)) {
+            validHwidsArray.push(hwidString);
+        } else {
+            invalidHwidsArray.push(hwidString);
+        }
+    }
+
+    return { invalidHwidsArray, validHwidsArray };
 }
 
 

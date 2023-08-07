@@ -1,11 +1,13 @@
-const modulename = 'StatsCollector';
+const modulename = 'PerformanceCollector';
 import fse from 'fs-extra';
-import logger from '@core/extras/console.js';
-import { convars, verbose } from '@core/globalData';
-import { parsePerf, diffPerfs, validatePerfThreadData, validatePerfCacheData } from './statsUtils.js'
+import * as d3array from 'd3-array';
+import { convars } from '@core/globalData';
+import { parsePerf, diffPerfs, validatePerfThreadData, validatePerfCacheData } from './perfUtils.js';
 import got from '@core/extras/got.js';
 // import TimeSeries from './timeSeries.js'; //NOTE: may still use for the player counter
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
+
 
 //Helper functions
 const getEpoch = (mod, ts = false) => {
@@ -15,7 +17,7 @@ const getEpoch = (mod, ts = false) => {
 };
 
 
-export default class StatsCollector {
+export default class PerformanceCollector {
     constructor() {
         // this.playersTimeSeries = new TimeSeries(`${globals.info.serverProfilePath}/data/players.json`, 10, 60*60*24);
         this.hardConfigs = {
@@ -37,16 +39,13 @@ export default class StatsCollector {
             try {
                 await this.collectPerformance();
             } catch (error) {
-                if (verbose) {
-                    logError('Error while collecting fxserver performance data');
-                    dir(error);
-                }
+                console.verbose.warn('Error while collecting fxserver performance data');
+                console.verbose.dir(error);
             }
         }, 60 * 1000);
     }
 
 
-    //================================================================
     /**
      * Loads the database/cache/history for the performance heatmap
      */
@@ -54,14 +53,14 @@ export default class StatsCollector {
         let rawFile = null;
         try {
             rawFile = await fse.readFile(this.hardConfigs.heatmapDataFile, 'utf8');
-        } catch (error) {}
+        } catch (error) { }
 
         const setFile = async () => {
             try {
                 await fse.writeFile(this.hardConfigs.heatmapDataFile, '[]');
                 this.perfSeries = [];
             } catch (error) {
-                logError(`Unable to create stats_heatmapData_v1 with error: ${error.message}`);
+                console.error(`Unable to create stats_heatmapData_v1 with error: ${error.message}`);
                 process.exit();
             }
         };
@@ -73,8 +72,8 @@ export default class StatsCollector {
                 if (!validatePerfCacheData(heatmapData)) throw new Error('invalid data in cache');
                 this.perfSeries = heatmapData.slice(-this.hardConfigs.performance.lengthCap);
             } catch (error) {
-                logError(`Failed to load stats_heatmapData_v1 with message: ${error.message}`);
-                logError('Since this is not a critical file, it will be reset.');
+                console.warn(`Failed to load stats_heatmapData_v1 with message: ${error.message}`);
+                console.warn('Since this is not a critical file, it will be reset.');
                 await setFile();
             }
         } else {
@@ -83,7 +82,6 @@ export default class StatsCollector {
     }
 
 
-    //================================================================
     /**
      * TODO:
      * Cron function to collect the player count from fxserver.
@@ -102,11 +100,51 @@ export default class StatsCollector {
         // }
         // const playerlist = globals.playerlistManager.getPlayerList();
         // this.playersTimeSeries.add(playerlist.length);
-        // dir(playerlist.length)
+        // console.dir(playerlist.length)
     }
 
 
-    //================================================================
+    /**
+     * Returns a summary of the collected data and returns.
+     * Format: { medianPlayers: number, epochs: number, buckets: number[] } | null
+     */
+    getSummary(threadName) {
+        if (this.perfSeries === null) return;
+        const availableThreads = ['svNetwork', 'svSync', 'svMain'];
+        if (!availableThreads.includes(threadName)) throw new Error('unknown thread name');
+
+        //Getting snapshots
+        const snapsPerHour = 60 / this.hardConfigs.performance.resolution;
+        const minSnapshots = 4 * snapsPerHour;
+        const maxDeltaTime = 30 * snapsPerHour; //30 hours
+        const relevantSnapshots = this.perfSeries.slice(-maxDeltaTime);
+        if (relevantSnapshots.length < minSnapshots) {
+            return null; //not enough data for meaningful analysis
+        }
+
+        //that's short for cumulative buckets 😏
+        const cumBuckets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let cumTicks = 0;
+
+        //Processing each snapshot - then each bucket
+        for (const snapshop of relevantSnapshots) {
+            for (let bIndex = 0; bIndex < 15; bIndex++) {
+                const prevBucket = (bIndex) ? snapshop.perfSrc[threadName].buckets[bIndex - 1] : 0;
+                const tickCount = snapshop.perfSrc[threadName].buckets[bIndex] - prevBucket;
+                cumTicks += tickCount;
+                cumBuckets[bIndex] += tickCount;
+            }
+        }
+
+        //Formatting Output
+        return {
+            buckets: cumBuckets.map(ticks => ticks / cumTicks),
+            medianPlayers: d3array.median(relevantSnapshots, x => x.clients),
+            epochs: relevantSnapshots.length,
+        };
+    }
+
+
     /**
      * Cron function to collect the performance data from fxserver.
      * This function will also collect player count and process the perf history.
@@ -127,6 +165,7 @@ export default class StatsCollector {
         if (this.perfSeries === null) return;
         if (globals.fxRunner.fxChild === null) return;
         if (globals.playerlistManager === null) return;
+        if (globals.healthMonitor.currentStatus !== 'ONLINE') return;
 
         //Commom vars
         const now = Date.now();
@@ -136,10 +175,9 @@ export default class StatsCollector {
         //Check skip rules
         if (
             lastSnap
-            && getEpoch(cfg.resolution, lastSnap.ts) == getEpoch(cfg.resolution)
+            && getEpoch(cfg.resolution, lastSnap.ts) === getEpoch(cfg.resolution)
             && now - lastSnap.ts < cfg.resolution * 60 * 1000
         ) {
-            if (verbose) log('Skipping perf collection due to resolution');
             return;
         }
 
@@ -155,13 +193,17 @@ export default class StatsCollector {
             throw new Error('invalid or incomplete /perf/ response');
         }
 
-        //Process performance data
+        //Check if is linear or not (server reset or skipped epoch)
         const islinear = (
             lastSnap
             && now - lastSnap.ts <= cfg.resolution * 60 * 1000 * 4 //resolution time in ms * 4 -- just in case there is some lag
             && lastSnap.mainTickCounter < currPerfData.svMain.count
         );
+
+        //Calculate the tick/time counts since last epoch
         const currPerfDiff = diffPerfs(currPerfData, (islinear) ? lastSnap.perfSrc : false);
+
+        //ForEach thread, individualize tick counts (instead of CumSum) and calculates frequency
         Object.keys(currPerfDiff).forEach((thread) => {
             const bucketsFrequencies = [];
             currPerfDiff[thread].buckets.forEach((b, bIndex) => {
@@ -171,6 +213,8 @@ export default class StatsCollector {
             });
             currPerfDiff[thread].buckets = bucketsFrequencies;
         });
+
+        //Prepare snapshop object
         const currSnapshot = {
             ts: now,
             skipped: !islinear,
@@ -180,21 +224,19 @@ export default class StatsCollector {
             perf: currPerfDiff,
         };
 
-        //Push to cache and save it
+        //Push to cache
         this.perfSeries.push(currSnapshot);
-        if (this.perfSeries.length > this.hardConfigs.performance.lengthCap){
+        if (this.perfSeries.length > this.hardConfigs.performance.lengthCap) {
             this.perfSeries.shift();
         }
+
+        //Save perf series do file
         try {
             await fse.outputJSON(this.hardConfigs.heatmapDataFile, this.perfSeries);
-            if (verbose) {
-                logOk(`Collected performance snapshot #${this.perfSeries.length}`);
-            }
+            console.verbose.ok(`Collected performance snapshot #${this.perfSeries.length}`);
         } catch (error) {
-            if (verbose) {
-                logWarn('Failed to write the performance history log file with error:');
-                dir(error);
-            }
+            console.verbose.warn('Failed to write the performance history log file with error:');
+            console.verbose.dir(error);
         }
     }
 };

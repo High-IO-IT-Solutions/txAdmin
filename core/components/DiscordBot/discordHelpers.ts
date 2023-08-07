@@ -1,9 +1,9 @@
 const modulename = 'DiscordBot:cmd';
-import logger from '@core/extras/console.js';
 import TxAdmin from "@core/txAdmin";
 import orderedEmojis from 'unicode-emoji-json/data-ordered-emoji';
 import { ColorResolvable, CommandInteraction, EmbedBuilder, InteractionReplyOptions } from "discord.js";
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 const allEmojis = new Set(orderedEmojis);
 
 
@@ -25,11 +25,19 @@ const genericEmbed = (
     }
 }
 
+export const embedColors = {
+    info: '#1D76C9',
+    success: '#0BA70B',
+    warning: '#FFF100',
+    danger: '#A70B28',
+} as const;
+
 export const embedder = {
     generic: genericEmbed,
-    success: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, '#0BA70B', 'white_check_mark'),
-    warning: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, '#FFF100', 'warning'),
-    danger: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, '#A70B28', 'no_entry_sign'),
+    info: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, embedColors.info, 'information_source'),
+    success: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, embedColors.success, 'white_check_mark'),
+    warning: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, embedColors.warning, 'warning'),
+    danger: (msg: string, ephemeral = false) => genericEmbed(msg, ephemeral, embedColors.danger, 'no_entry_sign'),
 }
 
 
@@ -94,13 +102,13 @@ export const isValidButtonEmoji = (emoji: unknown) => {
 
 
 //Works
-// ogConsole.dir(isValidEmoji('<:txicon:1062339910654246964>'))
-// ogConsole.dir(isValidEmoji('1062339910654246964'))
-// ogConsole.dir(isValidEmoji('😄'))
-// ogConsole.dir(isValidEmoji('🇵🇼'))
-// ogConsole.dir(isValidEmoji('\u{1F469}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F48B}\u{200D}\u{1F469}'))
+// console.dir(isValidEmoji('<:txicon:1062339910654246964>'))
+// console.dir(isValidEmoji('1062339910654246964'))
+// console.dir(isValidEmoji('😄'))
+// console.dir(isValidEmoji('🇵🇼'))
+// console.dir(isValidEmoji('\u{1F469}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F48B}\u{200D}\u{1F469}'))
 
 //Discord throws api error
-// ogConsole.dir(isValidEmoji(':smile:'))
-// ogConsole.dir(isValidEmoji('smile'))
-// ogConsole.dir(isValidEmoji({name: 'smile'}))
+// console.dir(isValidEmoji(':smile:'))
+// console.dir(isValidEmoji('smile'))
+// console.dir(isValidEmoji({name: 'smile'}))

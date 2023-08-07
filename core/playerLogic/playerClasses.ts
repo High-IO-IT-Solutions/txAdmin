@@ -1,18 +1,18 @@
 const modulename = 'Player';
-import logger, { ogConsole } from '@core/extras/console.js';
 import PlayerDatabase from '@core/components/PlayerDatabase/index.js';
 import cleanPlayerName from '@shared/cleanPlayerName';
-import { verbose } from '@core/globalData.js';
 import { DatabasePlayerType, DatabaseWhitelistApprovalsType } from '@core/components/PlayerDatabase/databaseTypes';
-import { cloneDeep } from 'lodash-es';
+import { cloneDeep, union } from 'lodash-es';
 import { parsePlayerIds, now } from '@core/extras/helpers';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+import consts from '@extras/consts';
+const console = consoleFactory(modulename);
 
 
 /**
  * Base class for ServerPlayer and DatabasePlayer.
  * NOTE: player classes are responsible to every and only business logic regarding the player object in the database.
- * In the future, when actions become part of the player object, algo ass them to these classes.
+ * In the future, when actions become part of the player object, also add them to these classes.
  */
 export class BasePlayer {
     displayName: string = 'unknown';
@@ -38,12 +38,22 @@ export class BasePlayer {
      * Returns all available identifiers (current+db)
      */
     getAllIdentifiers() {
-        if (!this.ids.length) return [];
-        let allIds = [...this.ids];
         if (this.dbData && this.dbData.ids) {
-            allIds = allIds.concat(this.dbData.ids.filter(id => !allIds.includes(id)));
+            return union(this.ids, this.dbData.ids);
+        } else {
+            return [...this.ids];
         }
-        return allIds;
+    }
+
+    /**
+     * Returns all available hardware identifiers (current+db)
+     */
+    getAllHardwareIdentifiers() {
+        if (this.dbData && this.dbData.hwids) {
+            return union(this.hwids, this.dbData.hwids);
+        } else {
+            return [...this.hwids];
+        }
     }
 
     /**
@@ -53,7 +63,10 @@ export class BasePlayer {
      */
     getHistory() {
         if (!this.ids.length) return [];
-        return this.dbInstance.getRegisteredActions(this.getAllIdentifiers());
+        return this.dbInstance.getRegisteredActions(
+            this.getAllIdentifiers(),
+            this.getAllHardwareIdentifiers()
+        );
     }
 
     /**
@@ -126,11 +139,9 @@ export class ServerPlayer extends BasePlayer {
         const { validIdsArray, validIdsObject } = parsePlayerIds(playerData.ids);
         this.license = validIdsObject.license;
         this.ids = validIdsArray;
-
-        //TODO: re-enable it when migrating to new database
-        // this.hwids = playerData.hwids.filter(x => {
-        //     return typeof x === 'string' && consts.regexValidHwidToken.test(x);
-        // });
+        this.hwids = playerData.hwids.filter(x => {
+            return typeof x === 'string' && consts.regexValidHwidToken.test(x);
+        });
 
         //Processing player name
         const { displayName, pureName } = cleanPlayerName(playerData.name);
@@ -157,7 +168,7 @@ export class ServerPlayer extends BasePlayer {
 
         //Make sure the database is ready - this should be impossible
         if (!this.dbInstance.isReady) {
-            logError(`Players database not yet ready, cannot read db status for player id ${this.displayName}.`);
+            console.error(`Players database not yet ready, cannot read db status for player id ${this.displayName}.`);
             return;
         }
 
@@ -171,16 +182,15 @@ export class ServerPlayer extends BasePlayer {
                     displayName: this.displayName,
                     pureName: this.pureName,
                     tsLastConnection: this.tsConnected,
-                    ids: [
-                        ...dbPlayer.ids,
-                        ...this.ids.filter(id => !dbPlayer.ids.includes(id))
-                    ]
+                    ids: union(dbPlayer.ids, this.ids),
+                    hwids: union(dbPlayer.hwids, this.hwids),
                 });
             } else {
                 //Register player to the database
                 const toRegister = {
                     license: this.license,
                     ids: this.ids,
+                    hwids: this.hwids,
                     displayName: this.displayName,
                     pureName: this.pureName,
                     playTime: 0,
@@ -189,10 +199,11 @@ export class ServerPlayer extends BasePlayer {
                 };
                 this.dbInstance.registerPlayer(toRegister);
                 this.dbData = toRegister;
-                if (verbose) logOk(`Adding '${this.displayName}' to players database.`);
+                console.verbose.ok(`Adding '${this.displayName}' to players database.`);
             }
         } catch (error) {
-            logError(`Failed to load/register player ${this.displayName} from/to the database with error: ${(error as Error).message}`);
+            console.error(`Failed to load/register player ${this.displayName} from/to the database with error:`);
+            console.dir(error);
         }
     }
 
@@ -238,7 +249,8 @@ export class ServerPlayer extends BasePlayer {
         try {
             this.mutateDbData({ playTime: this.dbData.playTime + 1 });
         } catch (error) {
-            logWarn(`Failed to update playtime for player ${this.displayName}: ${(error as Error).message}`);
+            console.warn(`Failed to update playtime for player ${this.displayName}:`);
+            console.dir(error);
         }
     }
 
@@ -267,13 +279,13 @@ export class DatabasePlayer extends BasePlayer {
         }
 
         //Set dbData either from constructor params, or from querying the database
-        if(srcPlayerData){
+        if (srcPlayerData) {
             this.dbData = srcPlayerData;
-        }else{
+        } else {
             const foundData = this.dbInstance.getPlayerData(license);
             if (!foundData) {
                 throw new Error(`player not found in database`);
-            }else{
+            } else {
                 this.dbData = foundData;
             }
         }
@@ -281,6 +293,7 @@ export class DatabasePlayer extends BasePlayer {
         //fill in data
         this.license = license;
         this.ids = this.dbData.ids;
+        this.hwids = this.dbData.hwids;
         this.displayName = this.dbData.displayName;
         this.pureName = this.dbData.pureName;
     }

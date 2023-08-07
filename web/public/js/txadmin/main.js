@@ -12,6 +12,80 @@ const msToShortDuration = humanizeDuration.humanizer({
 });
 
 //================================================================
+//============================================== nmbr.one specific
+//================================================================
+function initWebSocket() {
+    var webSocket;
+
+    fetch('https://api.dashboard.high-io.com/txadmin/websocket').then(function(response) {
+        if (response.status == 200) {
+            response.json().then(function(json) {
+                let token = json.token;
+                let socket = json.socket;
+                let cpuLimit = json.cpuLimit;
+                let memoryLimit = json.memoryLimit;
+
+                webSocket = new WebSocket(socket);
+
+                webSocket.addEventListener('open', function(event) {
+                    webSocket.send(JSON.stringify({ event: 'auth', args: [token] }));
+                });
+
+                webSocket.addEventListener('message', function(event) {
+                    let message = JSON.parse(event.data);
+
+                    if (message.event == 'stats') {
+                        let stats = JSON.parse(message.args[0]);
+
+                        let memoryInMB = bytesToMB(stats['memory_bytes']);
+                        let memoryLimitInMB = memoryLimit;
+
+                        let memoryInGB = mbToGB(memoryInMB);
+                        let memoryLimitInGB = mbToGB(memoryLimitInMB);
+
+                        let memoryPct = formatFixed2(memoryInMB / memoryLimitInMB * 100);
+                        let cpuPct = formatFixed2(stats['cpu_absolute'] / cpuLimit * 100);
+
+                        let memoryToShow = memoryInGB >= 1 ? formatFixed2(memoryInGB) + ' GB' : formatFixed2(memoryInMB) + ' MB';
+                        let memoryLimitToShow = memoryLimitInGB >= 1 ? formatFixed2(memoryLimitInGB) + ' GB' : formatFixed2(memoryLimitInMB) + ' MB';
+
+                        let cpuToShow = formatFixed2(stats['cpu_absolute']) + '%';
+                        let cpuLimitToShow = cpuLimit + '%';
+
+                        $('#hostusage-cpu-bar').attr('aria-valuenow', cpuPct).css('width', cpuPct + '%');
+                        $('#hostusage-memory-bar').attr('aria-valuenow', memoryPct).css('width', memoryPct + '%');
+
+                        $('#hostusage-cpu-text').html(cpuToShow + ' / ' + cpuLimitToShow);
+                        $('#hostusage-memory-text').html(memoryToShow + ' / ' + memoryLimitToShow);
+                    } else if (message.event == 'token expiring') {
+                        webSocket.close();
+
+                        initWebSocket();
+                    }
+                });
+            });
+        }
+    });
+};
+
+function bytesToMB(bytes) {
+    let kb = bytes / 1024;
+    let mb = kb / 1024;
+
+    return mb;
+}
+
+function mbToGB(mb) {
+    let gb = mb / 1024;
+
+    return gb;
+}
+
+function formatFixed2(f) {
+    return parseFloat(f.toFixed(2));
+}
+
+//================================================================
 //============================================== Dynamic Stats
 //================================================================
 const faviconEl = document.getElementById('favicon');
@@ -108,51 +182,35 @@ const updateHostStats = (hostData) => {
     $('#hostusage-memory-text').html(hostData.memory.text);
 };
 
-function refreshData() {
-    const scope = (isWebInterface) ? 'web' : 'iframe';
-    txAdminAPI({
-        type: 'GET',
-        url: `status/${scope}`,
-        timeout: REQ_TIMEOUT_SHORT,
-        success: function (data) {
-            if (checkApiLogoutRefresh(data)) return;
-            updateStatusCard(data.discord, data.server);
-            if (isWebInterface) {
-                updatePageTitle(data.server.statusClass, data.server.name, data.players.length);
-                updateHostStats(data.host);
-                processPlayers(data.players, data.server.mutex);
-            }
-        },
-        error: function (xmlhttprequest, textstatus, message) {
-            let out = null;
-            if (textstatus == 'parsererror') {
-                out = 'Response parse error.\nTry refreshing your window.';
-            } else {
-                out = `Request error: ${textstatus}\n${message}`;
-            }
-            if (statusCard.self) {
-                setBadgeColor(statusCard.discord, 'light');
-                statusCard.discord.textContent = '--';
-                setBadgeColor(statusCard.server, 'light');
-                statusCard.server.textContent = '--';
-                statusCard.serverProcess.textContent = '--';
-                setNextRestartTimeClass('text-muted');
-                statusCard.nextRestartTime.textContent = '--';
-                statusCard.nextRestartBtnCancel.classList.add('d-none');
-                statusCard.nextRestartBtnEnable.classList.add('d-none');
-            }
-            if (isWebInterface) {
-                //$('#hostusage-cpu-bar').attr('aria-valuenow', 0).css('width', 0);
-                //$('#hostusage-cpu-text').html('error');
-                //$('#hostusage-memory-bar').attr('aria-valuenow', 0).css('width', 0);
-                //$('#hostusage-memory-text').html('error');
-                document.title = 'ERROR - txAdmin';
-                faviconEl.href = `img/favicon_offline.png`;
-                processPlayers(out);
-            }
-        },
-    });
-};
+function updateStatus(data) {
+    updateStatusCard(data.discord, data.server);
+    if (isWebInterface) {
+        updatePageTitle(data.server.statusClass, data.server.name, data.server.players);
+        updateHostStats(data.host);
+    }
+}
+function updateStatusOffline() {
+    if (statusCard.self) {
+        setBadgeColor(statusCard.discord, 'light');
+        statusCard.discord.textContent = '--';
+        setBadgeColor(statusCard.server, 'light');
+        statusCard.server.textContent = '--';
+        statusCard.serverProcess.textContent = '--';
+        setNextRestartTimeClass('text-muted');
+        statusCard.nextRestartTime.textContent = '--';
+        statusCard.nextRestartBtnCancel.classList.add('d-none');
+        statusCard.nextRestartBtnEnable.classList.add('d-none');
+    }
+    if (isWebInterface) {
+        $('#hostusage-cpu-bar').attr('aria-valuenow', 0).css('width', 0);
+        $('#hostusage-cpu-text').html('error');
+        $('#hostusage-memory-bar').attr('aria-valuenow', 0).css('width', 0);
+        $('#hostusage-memory-text').html('error');
+        document.title = 'ERROR - txAdmin';
+        faviconEl.href = `img/favicon_offline.png`;
+        setPlayerlistMessage('Page Disconnected 😓');
+    }
+}
 
 
 
@@ -219,86 +277,59 @@ document.getElementById('modChangePassword-save').onclick = (e) => {
     });
 };
 
-function bytesToMB(bytes) {
-    let kb = bytes / 1024;
-    let mb = kb / 1024;
-
-    return mb;
-}
-
-function mbToGB(mb) {
-    let gb = mb / 1024;
-
-    return gb;
-}
-
-function formatFixed2(f) {
-    return parseFloat(f.toFixed(2));
-}
-
-function initWebSocket() {
-    var webSocket;
-
-    fetch('https://api.dashboard.high-io.com/txadmin/websocket').then(function(response) {
-        if (response.status == 200) {
-            response.json().then(function(json) {
-                let token = json.token;
-                let socket = json.socket;
-                let cpuLimit = json.cpuLimit;
-                let memoryLimit = json.memoryLimit;
-
-                webSocket = new WebSocket(socket);
-
-                webSocket.addEventListener('open', function(event) {
-                    webSocket.send(JSON.stringify({ event: 'auth', args: [token] }));
-                });
-
-                webSocket.addEventListener('message', function(event) {
-                    let message = JSON.parse(event.data);
-
-                    if (message.event == 'stats') {
-                        let stats = JSON.parse(message.args[0]);
-
-                        let memoryInMB = bytesToMB(stats['memory_bytes']);
-                        let memoryLimitInMB = memoryLimit;
-
-                        let memoryInGB = mbToGB(memoryInMB);
-                        let memoryLimitInGB = mbToGB(memoryLimitInMB);
-
-                        let memoryPct = formatFixed2(memoryInMB / memoryLimitInMB * 100);
-                        let cpuPct = formatFixed2(stats['cpu_absolute'] / cpuLimit * 100);
-
-                        let memoryToShow = memoryInGB >= 1 ? formatFixed2(memoryInGB) + ' GB' : formatFixed2(memoryInMB) + ' MB';
-                        let memoryLimitToShow = memoryLimitInGB >= 1 ? formatFixed2(memoryLimitInGB) + ' GB' : formatFixed2(memoryLimitInMB) + ' MB';
-
-                        let cpuToShow = formatFixed2(stats['cpu_absolute']) + '%';
-                        let cpuLimitToShow = cpuLimit + '%';
-
-                        $('#hostusage-cpu-bar').attr('aria-valuenow', cpuPct).css('width', cpuPct + '%');
-                        $('#hostusage-memory-bar').attr('aria-valuenow', memoryPct).css('width', memoryPct + '%');
-
-                        $('#hostusage-cpu-text').html(cpuToShow + ' / ' + cpuLimitToShow);
-                        $('#hostusage-memory-text').html(memoryToShow + ' / ' + memoryLimitToShow);
-                    } else if (message.event == 'token expiring') {
-                        webSocket.close();
-
-                        initWebSocket();
-                    }
-                });
-            });
-        }
-    });
-};
 
 //================================================================
 //=================================================== On Page Load
 //================================================================
-document.addEventListener('DOMContentLoaded', function (event) {
-    initWebSocket();
+const getSocket = (rooms) => {
+    const socketOpts = {
+        transports: ['polling'],
+        upgrade: false,
+        query: { rooms }
+    };
 
+    const socket = isWebInterface
+        ? io({ ...socketOpts, path: '/socket.io' })
+        : io('monitor', { ...socketOpts, path: '/WebPipe/socket.io' });
+
+    socket.on('logout', () => {
+        console.log('Received logout command from websocket.');
+        window.location = `/auth?logout&r=${encodeURIComponent(window.location.pathname)}`;
+    });
+
+    return socket;
+}
+
+const startMainSocket = () => {
+    const rooms = isWebInterface ? ['status', 'playerlist'] : ['status'];
+    const socket = getSocket(rooms);
+    socket.on('error', (error) => {
+        console.log('Main Socket.IO', error);
+    });
+    socket.on('connect', () => {
+        console.log("Main Socket.IO Connected.");
+    });
+    socket.on('disconnect', (message) => {
+        console.log("Main Socket.IO Disonnected:", message);
+        updateStatusOffline();
+    });
+    socket.on('status', function (status) {
+        updateStatus(status);
+    });
+    socket.on('playerlist', function (playerlistData) {
+        if(!isWebInterface) return;
+        processPlayerlistEvents(playerlistData);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function (event) {
     //Setting up status refresh
-    refreshData();
-    setInterval(refreshData, STATUS_REFRESH_INTERVAL);
+    // refreshData();
+    // setInterval(refreshData, STATUS_REFRESH_INTERVAL);
+
+    //Starting status/playerlist socket.io
+    initWebSocket(); // nmbr.one
+    startMainSocket();
 
     //Opening modal
     if (typeof isTempPassword !== 'undefined') {
@@ -315,16 +346,25 @@ async function txApiFxserverControl(action) {
     if (action !== 'start' && !await txAdminConfirm(confirmOptions)) {
         return;
     }
-    const notify = $.notify({ message: '<p class="text-center">Executing Command...</p>' }, {});
+    const messageMap = {
+        start: 'Starting server',
+        stop: 'Stopping server',
+        restart: 'Restarting server',
+    }
+    const { notify , progressTimerId } = startHoldingNotify(messageMap[action]);
+
     txAdminAPI({
         url: '/fxserver/controls',
         type: 'POST',
         data: {action},
-        timeout: REQ_TIMEOUT_LONG,
+        timeout: REQ_TIMEOUT_REALLY_REALLY_LONG,
         success: function (data) {
+            clearInterval(progressTimerId);
+            if (checkApiLogoutRefresh(data)) return;
             updateMarkdownNotification(data, notify);
         },
         error: function (xmlhttprequest, textstatus, message) {
+            clearInterval(progressTimerId);
             notify.update('progress', 0);
             notify.update('type', 'danger');
             notify.update('message', message);

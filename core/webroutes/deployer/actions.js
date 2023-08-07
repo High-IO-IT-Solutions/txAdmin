@@ -4,10 +4,10 @@ import { cloneDeep }  from 'lodash-es';
 import slash from 'slash';
 import mysql from 'mysql2/promise'
 import consts from '@core/extras/consts';
-import logger from '@core/extras/console.js';
 import { txEnv, convars } from '@core/globalData';
 import { validateModifyServerConfig } from '../../extras/fxsConfigHelper';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
@@ -189,6 +189,7 @@ async function handleSaveConfig(ctx) {
     }
     const serverCFG = ctx.request.body.serverCFG;
     const cfgFilePath = path.join(globals.deployer.deployPath, 'server.cfg');
+    globals.persistentCache.set('deployer:recipe', globals.deployer?.recipe?.name ?? 'unknown');
 
     //Validating config contents + saving file and backup
     try {
@@ -217,31 +218,32 @@ async function handleSaveConfig(ctx) {
     if (typeof globals.deployer.recipe.onesync !== 'undefined') {
         newFXRunnerConfig.onesync = globals.deployer.recipe.onesync;
     }
-    const saveFXRunnerStatus = globals.configVault.saveProfile('fxRunner', newFXRunnerConfig);
-
-    if (saveFXRunnerStatus) {
-        globals.fxRunner.refreshConfig();
-        ctx.utils.logAction('Completed and committed server deploy.');
-
-        //Starting server
-        const spawnMsg = await globals.fxRunner.spawnServer(false);
-        if (spawnMsg !== null) {
-            return ctx.send({
-                type: 'danger',
-                markdown: true,
-                message: `Config file saved, but faied to start server with error:\n${spawnMsg}`,
-            });
-        } else {
-            globals.deployer = null;
-            return ctx.send({ success: true });
-        }
-    } else {
-        logWarn(`[${ctx.session.auth.username}] Error changing fxserver settings via deployer.`);
+    try {
+        globals.configVault.saveProfile('fxRunner', newFXRunnerConfig);
+    } catch (error) {
+        console.warn(`[${ctx.session.auth.username}] Error changing fxserver settings via deployer.`);
+        console.verbose.dir(error);
         return ctx.send({
             type: 'danger',
             markdown: true,
-            message: '**Error saving the configuration file.**',
+            message: `**Error saving the configuration file:** ${error.message}`
         });
+    }
+
+    globals.fxRunner.refreshConfig();
+    ctx.utils.logAction('Completed and committed server deploy.');
+
+    //Starting server
+    const spawnMsg = await globals.fxRunner.spawnServer(false);
+    if (spawnMsg !== null) {
+        return ctx.send({
+            type: 'danger',
+            markdown: true,
+            message: `Config file saved, but faied to start server with error:\n${spawnMsg}`,
+        });
+    } else {
+        globals.deployer = null;
+        return ctx.send({ success: true });
     }
 }
 

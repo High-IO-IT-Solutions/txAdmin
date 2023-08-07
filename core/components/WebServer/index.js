@@ -19,22 +19,22 @@ import { customAlphabet } from 'nanoid';
 import dict51 from 'nanoid-dictionary/nolookalikes';
 
 import { setHttpCallback } from '@citizenfx/http-wrapper';
-import { convars, txEnv, verbose } from '@core/globalData';
-import { requestAuth } from './requestAuthenticator.js';
+import { convars, txEnv } from '@core/globalData';
 import WebCtxUtils from './ctxUtils.js';
 import router from './router';
-import logger from '@core/extras/console.js';
-
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 const nanoid = customAlphabet(dict51, 20);
 
 
 export default class WebServer {
-    constructor(config) {
+    constructor(txAdmin, config) {
+        this.txAdmin = txAdmin;
         this.config = config;
         this.luaComToken = nanoid();
         this.webSocket = null;
         this.isListening = false;
+        this.httpRequestsCounter = 0;
 
         //Generate cookie key
         const pathHash = crypto.createHash('shake256', { outputLength: 6 })
@@ -47,14 +47,18 @@ export default class WebServer {
         this.setupWebSocket();
         this.setupServerCallbacks();
 
-        //Cron function
+        //Counting requests per minute
         setInterval(() => {
-            const httpCounter = globals.databus.txStatsData.httpCounter;
-            httpCounter.log.push(httpCounter.current);
-            if (httpCounter.log.length > 10) httpCounter.log.shift();
-            if (httpCounter.current > httpCounter.max) httpCounter.max = httpCounter.current;
-            httpCounter.current = 0;
-        }, 60 * 1000);
+            if(this.httpRequestsCounter > 10_000){
+                const numberFormatter = new Intl.NumberFormat('en-US');
+                console.majorMultilineError([
+                    `txAdmin might be under a DDoS attack!`,
+                    `We detected ${numberFormatter.format(this.httpRequestsCounter)} HTTP requests in the last minute.`,
+                    'Make sure you have a proper firewall setup and/or a reverse proxy with rate limiting.',
+                ]);
+            }
+            this.httpRequestsCounter = 0;
+        }, 60_000);
     }
 
 
@@ -81,33 +85,25 @@ export default class WebServer {
         //Setting up app
         this.app.use(WebCtxUtils);
         this.app.on('error', (error, ctx) => {
-            if (
-                typeof error.code == 'string'
-                && (
-                    error.code.startsWith('HPE_')
-                    || error.code.startsWith('ECONN')
-                    || error.code.startsWith('EPIPE')
-                    || error.code.startsWith('ECANCELED')
-                )
-            ) {
-                if (verbose) {
-                    logError(`Probably harmless error on ${ctx.path}`);
-                    dir(error);
-                }
-            } else {
-                logError(`Probably harmless error on ${ctx.path}`);
-                logError('Please be kind and send a screenshot of this error to the txAdmin developer.');
-                dir(error);
+            if (!(
+                error.code?.startsWith('HPE_')
+                || error.code?.startsWith('ECONN')
+                || error.code === 'EPIPE'
+                || error.code === 'ECANCELED'
+            )) {
+                console.error(`Probably harmless error on ${ctx.path}`);
+                console.error('Please be kind and send a screenshot of this error to the txAdmin developer.');
+                console.dir(error);
             }
         });
 
         //Disable CORS on dev mode
-        if(convars.isDevMode){
+        if (convars.isDevMode) {
             this.app.use(KoaCors());
         }
 
         //Setting up timeout/error/no-output/413:
-        const timeoutLimit = 15 * 1000;
+        const timeoutLimit = 35 * 1000; //REQ_TIMEOUT_REALLY_REALLY_LONG is 30s
         const jsonLimit = '16MB';
         this.app.use(async (ctx, next) => {
             ctx.set('Server', `txAdmin v${txEnv.txAdminVersion}`);
@@ -122,7 +118,7 @@ export default class WebServer {
                 await Promise.race([timeout, next()]);
                 clearTimeout(timer);
                 if (typeof ctx.body == 'undefined' || (typeof ctx.body == 'string' && !ctx.body.length)) {
-                    if (verbose) logWarn(`Route without output: ${ctx.path}`);
+                    console.verbose.warn(`Route without output: ${ctx.path}`);
                     return ctx.body = '[no output from route]';
                 }
             } catch (error) {
@@ -138,22 +134,22 @@ export default class WebServer {
                 //NOTE: not using HTTP logger endpoint anymore, FD3 only
                 if (error.type === 'entity.too.large') {
                     const desc = `Entity too large for: ${reqPath}`;
-                    if (verbose) logError(desc, methodName);
+                    console.verbose.error(desc, methodName);
                     ctx.status = 413;
                     ctx.body = { error: desc };
                 } else if (ctx.state.timeout) {
                     const desc = `${prefix} Route timed out: ${reqPath}`;
-                    logError(desc, methodName);
+                    console.error(desc, methodName);
                     ctx.status = 408;
                     ctx.body = desc;
                 } else if (error.message === 'Malicious Path' || error.message === 'failed to decode') {
                     const desc = `${prefix} Malicious Path: ${reqPath}`;
-                    if (verbose) logError(desc, methodName);
+                    console.verbose.error(desc, methodName);
                     ctx.status = 406;
                     ctx.body = desc;
                 } else if (error.message.match(/^Unexpected token .+ in JSON at position \d+$/)) {
                     const desc = `${prefix} Invalid JSON for: ${reqPath}`;
-                    if (verbose) logError(desc, methodName);
+                    console.verbose.error(desc, methodName);
                     ctx.status = 400;
                     ctx.body = { error: desc };
                 } else {
@@ -161,8 +157,8 @@ export default class WebServer {
                         + `Message: ${error.message}\n`
                         + `Route: ${reqPath}\n`
                         + 'Make sure your txAdmin is updated.';
-                    logError(desc, methodName);
-                    if (verbose) dir(error);
+                    console.error(desc, methodName);
+                    console.verbose.dir(error);
                     ctx.status = 500;
                     ctx.body = desc;
                 }
@@ -180,7 +176,7 @@ export default class WebServer {
         this.app.use(async (ctx) => {
             if (typeof ctx._matchedRoute === 'undefined') {
                 ctx.status = 404;
-                if (verbose) logWarn(`Request 404 error: ${ctx.path}`);
+                console.verbose.warn(`Request 404 error: ${ctx.path}`);
                 return ctx.utils.render('standalone/404');
             }
         });
@@ -192,7 +188,7 @@ export default class WebServer {
     //Resetting lua comms token - called by fxRunner on spawnServer()
     resetToken() {
         this.luaComToken = nanoid();
-        if (verbose) log('Resetting luaComToken.');
+        console.verbose.log('Resetting luaComToken.');
     }
 
 
@@ -201,16 +197,10 @@ export default class WebServer {
         //Start SocketIO
         this.io = new SocketIO(HttpClass.createServer(), { serveClient: false });
         this.io.use(SessionIO(this.koaSessionKey, this.koaSessionMemoryStore));
-        this.io.use(requestAuth('socket'));
 
         //Setting up webSocket
-        this.webSocket = new WebSocket(this.io);
+        this.webSocket = new WebSocket(this.txAdmin, this.io);
         this.io.on('connection', this.webSocket.handleConnection.bind(this.webSocket));
-        //NOTE: when using namespaces:
-        // this.io.on('connection', client => {
-        //     logError('Triggered when not using any type of namespace.')
-        // });
-        // this.io.of('/console').use(this.webSocket.handleConnection.bind(this.webSocket));
     }
 
 
@@ -225,7 +215,7 @@ export default class WebServer {
 
         //Calls the appropriate callback
         try {
-            globals.databus.txStatsData.httpCounter.current++;
+            this.httpRequestsCounter++;
             if (req.url.startsWith('/socket.io')) {
                 this.io.engine.handleRequest(req, res);
             } else {
@@ -244,17 +234,17 @@ export default class WebServer {
         try {
             setHttpCallback(this.httpCallbackHandler.bind(this, 'citizenfx'));
         } catch (error) {
-            logError('Failed to start Cfx.re Reverse Proxy Callback with error:');
-            dir(error);
+            console.error('Failed to start Cfx.re Reverse Proxy Callback with error:');
+            console.dir(error);
         }
 
         //HTTP Server
         try {
             const listenErrorHandler = (error) => {
                 if (error.code !== 'EADDRINUSE') return;
-                logError(`Failed to start HTTP server, port ${error.port} already in use.`);
-                logError('Maybe you already have another txAdmin running in this port.');
-                logError('If you want to run multiple txAdmin, check the documentation for the port convar.');
+                console.error(`Failed to start HTTP server, port ${error.port} already in use.`);
+                console.error('Maybe you already have another txAdmin running in this port.');
+                console.error('If you want to run multiple txAdmin, check the documentation for the port convar.');
                 process.exit(1);
             };
             this.httpServer = HttpClass.createServer(this.httpCallbackHandler.bind(this, 'httpserver'));
@@ -262,20 +252,20 @@ export default class WebServer {
 
             let iface;
             if (convars.forceInterface) {
-                logWarn(`Starting with interface ${convars.forceInterface}.`);
-                logWarn('If the HTTP server doesn\'t start, this is probably the reason.');
+                console.warn(`Starting with interface ${convars.forceInterface}.`);
+                console.warn('If the HTTP server doesn\'t start, this is probably the reason.');
                 iface = convars.forceInterface;
             } else {
                 iface = '0.0.0.0';
             }
 
             this.httpServer.listen(convars.txAdminPort, iface, async () => {
-                logOk(`Listening on ${iface}.`);
+                console.ok(`Listening on ${iface}.`);
                 this.isListening = true;
             });
         } catch (error) {
-            logError('Failed to start HTTP server with error:');
-            dir(error);
+            console.error('Failed to start HTTP server with error:');
+            console.dir(error);
             process.exit();
         }
     }

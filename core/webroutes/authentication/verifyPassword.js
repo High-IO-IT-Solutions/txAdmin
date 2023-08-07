@@ -1,8 +1,7 @@
 const modulename = 'WebServer:AuthVerify';
-import logger from '@core/extras/console.js';
 import { isValidRedirectPath } from '@core/extras/helpers';
-import { verbose } from '@core/globalData';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
@@ -25,12 +24,12 @@ export default async function AuthVerify(ctx) {
         //Checking admin
         const admin = globals.adminVault.getAdminByName(ctx.request.body.username);
         if (!admin) {
-            logWarn(`Wrong username for from: ${ctx.ip}`);
+            console.warn(`Wrong username from: ${ctx.ip}`);
             renderData.message = 'Wrong Username!';
             return ctx.utils.render('login', renderData);
         }
         if (!VerifyPasswordHash(ctx.request.body.password.trim(), admin.password_hash)) {
-            logWarn(`Wrong password for from: ${ctx.ip}`);
+            console.warn(`Wrong password from: ${ctx.ip}`);
             renderData.message = 'Wrong Password!';
             return ctx.utils.render('login', renderData);
         }
@@ -46,11 +45,11 @@ export default async function AuthVerify(ctx) {
         };
 
         ctx.utils.logAction(`logged in from ${ctx.ip} via password`);
-        globals.databus.txStatsData.login.origins[ctx.txVars.hostType]++;
-        globals.databus.txStatsData.login.methods.password++;
+        globals?.statisticsManager.loginOrigins.count(ctx.txVars.hostType);
+        globals?.statisticsManager.loginMethods.count('password');
     } catch (error) {
-        logWarn(`Failed to authenticate ${ctx.request.body.username} with error: ${error.message}`);
-        if (verbose) dir(error);
+        console.warn(`Failed to authenticate ${ctx.request.body.username} with error: ${error.message}`);
+        console.verbose.dir(error);
         renderData.message = 'Error autenticating admin.';
         return ctx.utils.render('login', renderData);
     }

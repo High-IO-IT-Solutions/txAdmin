@@ -1,15 +1,15 @@
 import TxAdmin from './txAdmin';
-import logger from '@core/extras/console';
-import { txEnv, convars } from './globalData';
+import { convars } from './globalData';
 import checkPreRelease from '@core/extras/checkPreRelease';
-const { dir, log, logOk, logWarn, logError, setTTYTitle } = logger();
+import consoleFactory, { setTTYTitle } from '@extras/console';
+const console = consoleFactory();
 
 
 /**
  * Starting txAdmin (have fun :p)
  */
 const logDie = (x: string) => {
-    logError(x);
+    console.error(x);
     process.exit(1);
 };
 const serverProfile = GetConvar('serverProfile', 'default').replace(/[^a-z0-9._-]/gi, '').trim();
@@ -20,7 +20,7 @@ if (!serverProfile.length) {
     logDie('Invalid server profile name. Are you using Google Translator on the instructions page? Make sure there are no additional spaces in your command.');
 }
 
-setTTYTitle(txEnv.txAdminVersion, serverProfile);
+setTTYTitle(serverProfile);
 checkPreRelease();
 new TxAdmin(serverProfile);
 
@@ -32,19 +32,16 @@ new TxAdmin(serverProfile);
 setTimeout(() => {
     let hdTimer = Date.now();
     setInterval(() => {
-        let now = Date.now();
+        const now = Date.now();
         if (now - hdTimer > 2000) {
-            let sep = '='.repeat(70);
-            setTimeout(() => {
-                logError(sep);
-                logError('Major VPS freeze/lag detected!');
-                logError('THIS IS NOT AN ERROR CAUSED BY TXADMIN!');
-                logError(sep);
-            }, 1000);
+            console.majorMultilineError([
+                'Major VPS freeze/lag detected!',
+                'THIS IS NOT AN ERROR CAUSED BY TXADMIN!',
+            ]);
         }
         hdTimer = now;
     }, 500);
-}, 10000);
+}, 10_000);
 
 //Handle any stdio error
 process.stdin.on('error', (data) => { });
@@ -53,22 +50,27 @@ process.stderr.on('error', (data) => { });
 
 //Handle "the unexpected"
 process.on('unhandledRejection', (err: Error) => {
-    logError('Ohh nooooo - unhandledRejection');
-    logError(err.message);
-    dir(err.stack);
+    //We are handling this inside the DiscordBot component
+    if(err.message === 'Used disallowed intents') return;
+
+    console.error('Ohh nooooo - unhandledRejection');
+    console.dir(err);
 });
 process.on('uncaughtException', function (err: Error) {
-    logError('Ohh nooooo - uncaughtException');
-    logError(err.message);
-    dir(err.stack);
+    console.error('Ohh nooooo - uncaughtException');
+    console.error(err.message);
+    console.dir(err.stack);
 });
 process.on('exit', (_code) => {
-    log('Stopping txAdmin');
+    console.warn('Stopping txAdmin');
 });
 Error.stackTraceLimit = 25;
 process.removeAllListeners('warning');
 process.on('warning', (warning) => {
-    if(warning.name !== 'ExperimentalWarning' || convars.isDevMode){
-        dir(warning);
+    //totally ignoring the warning, we know this is bad and shouldn't happen
+    if (warning.name === 'UnhandledPromiseRejectionWarning') return;
+
+    if (warning.name !== 'ExperimentalWarning' || convars.isDevMode) {
+        console.dir(warning);
     }
 });

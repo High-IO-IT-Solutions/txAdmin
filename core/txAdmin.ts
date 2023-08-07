@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import slash from 'slash';
 
-import logger from '@core/extras/console';
 import { txEnv } from '@core/globalData';
 
 import { printBanner } from '@core/extras/banner';
@@ -17,15 +16,18 @@ import FxRunner from '@core/components/FxRunner';
 import Logger from '@core/components/Logger';
 import HealthMonitor from '@core/components/HealthMonitor';
 import Scheduler from '@core/components/Scheduler';
-import StatsCollector from '@core/components/StatsCollector';
+import StatisticsManager from '@core/components/StatisticsManager';
+import PerformanceCollector from '@core/components/PerformanceCollector';
 import Translator from '@core/components/Translator';
 import WebServer from '@core/components/WebServer';
 import ResourcesManager from '@core/components/ResourcesManager';
 import PlayerlistManager from '@core/components/PlayerlistManager';
 import PlayerDatabase from '@core/components/PlayerDatabase';
 import PersistentCache from '@core/components/PersistentCache';
+import UpdateChecker from '@core/components/UpdateChecker';
 
-const { dir, log, logOk, logWarn, logError } = logger(`v${txEnv.txAdminVersion}`);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(`v${txEnv.txAdminVersion}`);
 
 
 //Helpers
@@ -44,7 +46,8 @@ const globalsInternal: Record<string, any> = {
     dynamicAds: null,
     healthMonitor: null,
     scheduler: null,
-    statsCollector: null,
+    statisticsManager: null,
+    performanceCollector: null,
     translator: null,
     webServer: null,
     resourcesManager: null,
@@ -52,63 +55,12 @@ const globalsInternal: Record<string, any> = {
     playerDatabase: null,
     config: null,
     deployer: null,
+    updateChecker: null,
     info: {},
 
     //FIXME: settings:save webroute cannot call txAdmin.refreshConfig for now
     //so this hack allows it to call it
     func_txAdminRefreshConfig: ()=>{},
-
-    //NOTE: still not ideal, but since the extensions system changed entirely,
-    //      will have to rethink the plans for this variable.
-    databus: {
-        //internal
-        resourcesList: null,
-        updateChecker: null,
-        joinCheckHistory: [],
-
-        //stats
-        txStatsData: {
-            playerDBStats: null,
-            lastFD3Error: '',
-            monitorStats: {
-                heartBeatStats: {
-                    httpFailed: 0,
-                    fd3Failed: 0,
-                },
-                restartReasons: {
-                    close: 0,
-                    heartBeat: 0,
-                    healthCheck: 0,
-                },
-                bootSeconds: [],
-                freezeSeconds: [],
-            },
-            randIDFailures: 0,
-            pageViews: {},
-            httpCounter: {
-                current: 0,
-                max: 0,
-                log: [],
-            },
-            login: {
-                origins: {
-                    localhost: 0,
-                    cfxre: 0,
-                    ip: 0,
-                    other: 0,
-                    webpipe: 0,
-                },
-                methods: {
-                    discord: 0,
-                    citizenfx: 0,
-                    password: 0,
-                    zap: 0,
-                    nui: 0,
-                    iframe: 0,
-                },
-            },
-        },
-    },
 };
 
 //@ts-ignore: yes i know this is wrong
@@ -128,12 +80,14 @@ export default class TxAdmin {
     dynamicAds;
     healthMonitor;
     scheduler;
-    statsCollector;
+    statisticsManager;
+    performanceCollector;
     webServer;
     resourcesManager;
     playerlistManager;
     playerDatabase;
     persistentCache;
+    updateChecker;
 
     //Runtime
     readonly info: {
@@ -146,11 +100,16 @@ export default class TxAdmin {
         menuEnabled: boolean,
         menuAlignRight: boolean,
         menuPageKey: string,
+
+        hideDefaultAnnouncement: boolean,
+        hideDefaultDirectMessage: boolean,
+        hideDefaultWarning: boolean,
+        hideDefaultScheduledRestartWarning: boolean,
     }
     
 
     constructor(serverProfile: string) {
-        log(`Profile '${serverProfile}' starting...`);
+        console.log(`Profile '${serverProfile}' starting...`);
 
         //FIXME: hacky self reference because some webroutes need to access globals.txAdmin to pass it down
         globalsInternal.txAdmin = this;
@@ -161,7 +120,7 @@ export default class TxAdmin {
             try {
                 setupProfile(txEnv.osType, txEnv.fxServerPath, txEnv.fxServerVersion, serverProfile, profilePath);
             } catch (error) {
-                logError(`Failed to create profile '${serverProfile}' with error: ${(error as Error).message}`);
+                console.error(`Failed to create profile '${serverProfile}' with error: ${(error as Error).message}`);
                 process.exit();
             }
         }
@@ -183,8 +142,8 @@ export default class TxAdmin {
             //FIXME: hacky fix for settings:save to be able to update this
             globalsInternal.func_txAdminRefreshConfig = this.refreshConfig.bind(this);
         } catch (error) {
-            logError(`Error starting ConfigVault: ${(error as Error).message}`);
-            dir(error);
+            console.error(`Error starting ConfigVault:`);
+            console.dir(error);
             process.exit(1);
         }
 
@@ -220,10 +179,13 @@ export default class TxAdmin {
             this.scheduler = new Scheduler(profileConfig.monitor); //NOTE same opts as monitor, for now
             globalsInternal.scheduler = this.scheduler;
 
-            this.statsCollector = new StatsCollector();
-            globalsInternal.statsCollector = this.statsCollector;
+            this.statisticsManager = new StatisticsManager(this);
+            globalsInternal.statisticsManager = this.statisticsManager;
 
-            this.webServer = new WebServer(profileConfig.webServer);
+            this.performanceCollector = new PerformanceCollector();
+            globalsInternal.performanceCollector = this.performanceCollector;
+
+            this.webServer = new WebServer(this, profileConfig.webServer);
             globalsInternal.webServer = this.webServer;
 
             this.resourcesManager = new ResourcesManager();
@@ -237,18 +199,21 @@ export default class TxAdmin {
 
             this.persistentCache = new PersistentCache(this);
             globalsInternal.persistentCache = this.persistentCache;
+
+            this.updateChecker = new UpdateChecker();
+            globalsInternal.updateChecker = this.updateChecker;
         } catch (error) {
-            logError(`Error starting main components: ${(error as Error).message}`);
-            dir(error);
+            console.error(`Error starting main components:`);
+            console.dir(error);
             process.exit(1);
         }
 
         //Once they all finish loading, the function below will print the banner
-        printBanner();
-
-        //Run Update Checker every 15 minutes
-        updateChecker();
-        setInterval(updateChecker, 15 * 60 * 1000);
+        try {
+            printBanner();
+        } catch (error) {
+            console.dir(error);
+        }
     }
 
     /**

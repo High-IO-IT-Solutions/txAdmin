@@ -34,6 +34,11 @@ debugData<any>(
       action: "setVisible",
       data: true,
     },
+    {
+      action: "setGameName",
+      // data: 'fivem',
+      data: 'redm',
+    },
   ],
   150
 );

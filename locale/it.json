@@ -24,34 +24,35 @@
             "label_author": "Bannato da",
             "label_reason": "Motivo Ban",
             "label_id": "ID Ban",
-            "note_multiple_bans": "Nota: hai piu di un ban sui tuoi identificativi."
+            "note_multiple_bans": "Nota: hai piu di un ban sui tuoi identificativi.",
+            "note_diff_license": "Note: the ban above was applied for another <code>license</code>, which means some of your IDs/HWIDs match the ones associated with that ban."
         }
     },
     "whitelist_messages": {
         "admin_only": {
-            "mode_title": "This server is in <strong>Admin-only</strong> mode.",
-            "insufficient_ids": "You do not have <code>discord</code> or <code>fivem</code> identifiers, and at least one of them is required to validate if you are a txAdmin administrator.",
-            "deny_message": "Your identifiers are not assigned to any txAdmin administrator."
+            "mode_title": "Questo server è in modalità <strong>Solo-Admin</strong>.",
+            "insufficient_ids": "Non siamo riusciti a recuperare il tuo identificatore <code>discord</code> o il tuo identificatore <code>fivem</code>, almeno uno degli identificatori è necessario per verificare che tu sia un Amministratore.",
+            "deny_message": "I tuoi identificatori non sono assegnati a nessun account amministratore su txAdmin."
         },
         "guild_member": {
-            "mode_title": "This server is in <strong>Discord Guild Member Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
-            "deny_title": "You are required to join our Discord Guild to connect.",
-            "deny_message": "Please join the guild %{guildname} then try again."
+            "mode_title": "Questo server è in modalità <strong>Discord Member Whitelist</strong>.",
+            "insufficient_ids": "Non hai l'identificatore <code>discord</code>, che è richiesto per verificare se sei entrato nel nostro server Discord. Apri l'applicazione desktop di Discord e riprova (l'app Web non funzionerà).",
+            "deny_title": "Devi unirti al nostro server discord per poter giocare.",
+            "deny_message": "Per favore, unisciti al server discord %{guildname} e riprova."
         },
         "guild_roles": {
-            "mode_title": "This server is in <strong>Discord Role Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
-            "deny_notmember_title": "You are required to join our Discord Guild to connect.",
-            "deny_notmember_message": "Please join %{guildname}, get one of the required roles, then try again.",
-            "deny_noroles_title": "You do not have a whitelisted role required to join.",
-            "deny_noroles_message": "To join this server you are required to have at least one of the whitelisted roles on the guild %{guildname}."
+            "mode_title": "Questo server è in modalità <strong>Discord Role Whitelist</strong>.",
+            "insufficient_ids": "Non hai l'identificatore <code>discord</code>, che è richiesto per verificare se sei entrato nel nostro server Discord. Apri l'applicazione desktop di Discord e riprova (l'app Web non funzionerà).",
+            "deny_notmember_title": "Devi unirti al nostro server Discord per poter giocare.",
+            "deny_notmember_message": "Per favore, unisciti al server Discord %{guildname} richiedi il ruolo Whitelist e riprova a connetterti.",
+            "deny_noroles_title": "Non hai un ruolo autorizzato richiesto per unirti.",
+            "deny_noroles_message": "Per entrare a giocare su questo server devi avere almeno uno dei ruoli richiesti sul server Discord: %{guildname}."
         },
         "approved_license": {
-            "mode_title": "This server is in <strong>License Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>license</code> identifier, which means the server has <code>sv_lan</code> enabled. If you are the server owner, you can disable it in the <code>server.cfg</code> file.",
-            "deny_title": "You are not whitelisted to join this server.",
-            "request_id_label": "Request ID"
+            "mode_title": "Questo server è in modalità <strong>Solo Licenza Autorizzata</strong>.",
+            "insufficient_ids": "Non hai l'identificatore <code>license</code>, il che significa che il server ha <code>sv_lan</code> abilitato. Se sei il proprietario del server, puoi disabilitarlo nel file <code>server.cfg</code>.",
+            "deny_title": "Non sei whitelistato su questo server.",
+            "request_id_label": "ID Richiesta:"
         }
     },
     "server_actions": {
@@ -69,7 +70,8 @@
     "nui_menu": {
         "misc": {
             "help_message": "txAdmin Menu attivato, scrivi /tx per aprirlo.\nPuoi bindare un tasto in [Game Settings > Key Bindings > FiveM > Menu: Open Main Page].",
-            "menu_not_allowed": "I tuoi identificativi non corrispondono ad un admin registrato nel txAdmin.\nSe sei registrato al txAdmin, vai nella sezione Admin Manager e controlla che siano presenti i tuoi identificativi.",
+            "menu_not_admin": "I tuoi identificativi non corrispondono ad un admin registrato nel txAdmin.\nSe sei registrato al txAdmin, vai nella sezione Admin Manager e controlla che siano presenti i tuoi identificativi.",
+            "menu_auth_failed": "txAdmin Menu authentication failed with reason: %{reason}",
             "no_perms": "Non hai questo permesso.",
             "unknown_error": "Si è verificato un errore sconosciuto.",
             "not_enabled": "Il menu txAdmin non è attivo! Puoi attivarlo dalle impostazioni del txAdmin.",
@@ -169,7 +171,8 @@
                     "label": "Boosta l'auto per un maggiore divertimento (e forse velocità)",
                     "success": "Veicolo boostato!",
                     "already_boosted": "This vehicle was already boosted.",
-                    "unsupported_class": "This vehicle class is not supported."
+                    "unsupported_class": "This vehicle class is not supported.",
+                    "redm_not_mounted": "You can only boost when mounted on a horse."
                 }
             },
             "heal": {
@@ -286,7 +289,8 @@
                         "bring_player": "Bringando il Giocatore",
                         "spectate_failed": "Impossibile risolvere il bersaglio! Uscendo dallo Spectate.",
                         "spectate_yourself": "Non puoi spectarti da solo.",
-                        "freeze_yourself": "Non puoi freezarti da solo."
+                        "freeze_yourself": "Non puoi freezarti da solo.",
+                        "spectate_cycle_failed": "There are no players to cycle to."
                     }
                 },
                 "troll": {
@@ -343,7 +347,8 @@
             },
             "ids": {
                 "current_ids": "Identificativi correnti",
-                "previous_ids": "Identificativi usati precedentemente"
+                "previous_ids": "Identificativi usati precedentemente",
+                "all_hwids": "All Hardware IDs"
             }
         }
     }

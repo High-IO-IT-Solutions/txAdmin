@@ -1,6 +1,4 @@
 const modulename = 'PlayerDatabase';
-import logger, { ogConsole } from '@core/extras/console.js';
-import { verbose } from '@core/globalData';
 // eslint-disable-next-line no-unused-vars
 import { SAVE_PRIORITY_LOW, SAVE_PRIORITY_MEDIUM, SAVE_PRIORITY_HIGH, Database } from './database';
 import { genActionID, genWhitelistRequestID } from './idGenerator';
@@ -8,7 +6,8 @@ import TxAdmin from '@core/txAdmin.js';
 import { DatabaseActionType, DatabaseDataType, DatabasePlayerType, DatabaseWhitelistApprovalsType, DatabaseWhitelistRequestsType } from './databaseTypes';
 import { cloneDeep } from 'lodash-es';
 import { now } from '@core/extras/helpers';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 
 //Consts
@@ -23,8 +22,9 @@ type PlayerDbConfigType = {
     onJoinCheckBan: boolean;
     whitelistMode: 'disabled' | 'adminOnly' | 'guildMember' | 'guildRoles' | 'approvedLicense';
     whitelistedDiscordRoles: string[];
-    banRejectionMessage: string;
     whitelistRejectionMessage: string;
+    requiredBanHwidMatches: number;
+    banRejectionMessage: string;
 }
 
 
@@ -39,6 +39,11 @@ export default class PlayerDatabase {
     constructor(txAdmin: TxAdmin, public config: PlayerDbConfigType) {
         this.#txAdmin = txAdmin;
         this.#db = new Database();
+
+        //Checking config validity
+        if (this.config.requiredBanHwidMatches < 0 || this.config.requiredBanHwidMatches > 6) {
+            throw new Error('The playerDatabase.requiredBanHwidMatches setting must be between 0 (disabled) and 6.');
+        }
 
         //Database optimization cron function
         setTimeout(() => {
@@ -173,23 +178,37 @@ export default class PlayerDatabase {
 
     /**
      * Searches for any registered action in the database by a list of identifiers and optional filters
-     * Usage example: getRegisteredActions(['license:xxx'], {type: 'ban', revocation.timestamp: null})
+     * Usage example: getRegisteredActions(['license:xxx'], undefined, {type: 'ban', revocation.timestamp: null})
      */
     getRegisteredActions(
-        idArray: string[],
-        filter: object | Function = {}
+        idsArray: string[],
+        hwidsArray?: string[],
+        customFilter: object | Function = {}
     ): DatabaseActionType[] {
         if (!this.#db.obj) throw new Error(`database not ready yet`);
-        if (!Array.isArray(idArray)) throw new Error('Identifiers should be an array');
+        if (!Array.isArray(idsArray)) throw new Error('idsArray should be an array');
+        if (hwidsArray && !Array.isArray(hwidsArray)) throw new Error('hwidsArray should be an array or undefined');
+        const idsFilter = (action: DatabaseActionType) => idsArray.some((fi) => action.ids.includes(fi))
+        const hwidsFilter = (action: DatabaseActionType) => {
+            if (!action.hwids) return false;
+            const count = hwidsArray!.filter((fi) => action.hwids!.includes(fi)).length
+            return count >= this.config.requiredBanHwidMatches;
+        }
+
         try {
+            //small optimization
+            const idsMatchFilter = hwidsArray && hwidsArray.length && this.config.requiredBanHwidMatches
+                ? (a: DatabaseActionType) => idsFilter(a) || hwidsFilter(a)
+                : (a: DatabaseActionType) => idsFilter(a)
+
             return this.#db.obj.chain.get('actions')
-                .filter(filter as any)
-                .filter((a) => idArray.some((fi) => a.identifiers.includes(fi)))
+                .filter(customFilter as any)
+                .filter(idsMatchFilter)
                 .cloneDeep()
                 .value();
         } catch (error) {
             const msg = `Failed to search for a registered action database with error: ${(error as Error).message}`;
-            if (verbose) logError(msg);
+            console.verbose.error(msg);
             throw new Error(msg);
         }
     }
@@ -199,21 +218,24 @@ export default class PlayerDatabase {
      * Registers an action (ban, warn) and returns action id
      */
     registerAction(
-        identifiers: string[],
+        ids: string[],
         type: 'ban' | 'warn',
         author: string,
         reason: string,
         expiration: number | false = false,
-        playerName: string | false = false
+        playerName: string | false = false,
+        hwids?: string[], //only used for bans
     ): string {
         //Sanity check
         if (!this.#db.obj) throw new Error(`database not ready yet`);
-        if (!Array.isArray(identifiers) || !identifiers.length) throw new Error('Invalid identifiers array.');
+        if (!Array.isArray(ids) || !ids.length) throw new Error('Invalid ids array.');
         if (!validActions.includes(type)) throw new Error('Invalid action type.');
         if (typeof author !== 'string' || !author.length) throw new Error('Invalid author.');
         if (typeof reason !== 'string' || !reason.length) throw new Error('Invalid reason.');
         if (expiration !== false && (typeof expiration !== 'number')) throw new Error('Invalid expiration.');
         if (playerName !== false && (typeof playerName !== 'string' || !playerName.length)) throw new Error('Invalid playerName.');
+        if (hwids && !Array.isArray(hwids)) throw new Error('Invalid hwids array.');
+        if (type !== 'ban' && hwids) throw new Error('Hwids should only be used for bans.')
 
         //Saves it to the database
         const timestamp = now();
@@ -222,7 +244,8 @@ export default class PlayerDatabase {
             const toDB: DatabaseActionType = {
                 id: actionID,
                 type,
-                identifiers,
+                ids,
+                hwids,
                 playerName,
                 reason,
                 author,
@@ -240,8 +263,8 @@ export default class PlayerDatabase {
             return actionID;
         } catch (error) {
             let msg = `Failed to register event to database with message: ${(error as Error).message}`;
-            logError(msg);
-            if (verbose) dir(error);
+            console.error(msg);
+            console.verbose.dir(error);
             throw error;
         }
     }
@@ -279,8 +302,8 @@ export default class PlayerDatabase {
 
         } catch (error) {
             const msg = `Failed to revoke action with message: ${(error as Error).message}`;
-            logError(msg);
-            if (verbose) dir(error);
+            console.error(msg);
+            console.verbose.dir(error);
             throw error;
         }
     }
@@ -428,18 +451,6 @@ export default class PlayerDatabase {
             }, { players: 0, playTime: 0, whitelists: 0 })
             .value();
 
-        
-        //Stats only:
-        //FIXME: reevaluate this in the future
-        const databus = (globals.databus as any);
-        databus.txStatsData.playerDBStats = {
-            players: playerStats.players,
-            playTime: playerStats.playTime,
-            whitelists: playerStats.whitelists,
-            bans: actionStats.bans,
-            warns: actionStats.warns,
-        };
-
         return { ...actionStats, ...playerStats }
     }
 
@@ -464,7 +475,53 @@ export default class PlayerDatabase {
             return removed.length;
         } catch (error) {
             const msg = `Failed to clean database with error: ${(error as Error).message}`;
-            if (verbose) logError(msg);
+            console.verbose.error(msg);
+            throw new Error(msg);
+        }
+    }
+
+
+    /**
+     * Cleans the hwids from the database.
+     * @returns {number} number of removed HWIDs
+     */
+    wipeHwids(
+        fromPlayers: boolean,
+        fromBans: boolean,
+    ): number {
+        if (!this.#db.obj || !this.#db.obj.data) throw new Error(`database not ready yet`);
+        if (!Array.isArray(this.#db.obj.data.players)) throw new Error('Players table isn\'t an array yet.');
+        if (!Array.isArray(this.#db.obj.data.players)) throw new Error('Actions table isn\'t an array yet.');
+        if (typeof fromPlayers !== 'boolean' || typeof fromBans !== 'boolean') throw new Error('The parameters should be booleans.');
+
+        try {
+            this.#db.writeFlag(SAVE_PRIORITY_HIGH);
+            let removed = 0;
+            if (fromPlayers) {
+                this.#db.obj.chain.get('players')
+                    .map(player => {
+                        removed += player.hwids.length;
+                        player.hwids = [];
+                        return player;
+                    })
+                    .value();
+            }
+            if (fromBans)
+                this.#db.obj.chain.get('actions')
+                    .map(action => {
+                        if (action.type !== 'ban' || !action.hwids) {
+                            return action;
+                        } else {
+                            removed += action.hwids.length;
+                            action.hwids = [];
+                            return action;
+                        }
+                    })
+                    .value();
+            return removed;
+        } catch (error) {
+            const msg = `Failed to clean database with error: ${(error as Error).message}`;
+            console.verbose.error(msg);
             throw new Error(msg);
         }
     }
@@ -481,14 +538,14 @@ export default class PlayerDatabase {
         //Players that have not joined the last 16 days, and have less than 2 hours of playtime
         let playerRemoved;
         try {
-            const nineDaysAgo = now() - (16 * oneDay);
+            const sixteenDaysAgo = now() - (16 * oneDay);
             const filter = (p: DatabasePlayerType) => {
-                return (p.tsLastConnection < nineDaysAgo && p.playTime < 120);
+                return (p.tsLastConnection < sixteenDaysAgo && p.playTime < 120);
             }
             playerRemoved = this.cleanDatabase('players', filter);
         } catch (error) {
             const msg = `Failed to optimize players database with error: ${(error as Error).message}`;
-            logError(msg);
+            console.error(msg);
         }
 
         //Optimize whitelistRequests + whitelistApprovals
@@ -507,13 +564,13 @@ export default class PlayerDatabase {
             wlApprovalsRemoved = this.removeWhitelistApprovals(wlApprovalsFilter).length;
         } catch (error) {
             const msg = `Failed to optimize players database with error: ${(error as Error).message}`;
-            logError(msg);
+            console.error(msg);
         }
 
         this.#db.writeFlag(SAVE_PRIORITY_LOW);
-        logOk(`Internal Database optimized. This applies only for the txAdmin internal database, and does not affect your MySQL or framework (ESX/QBCore/etc) databases.`);
-        logOk(`- ${playerRemoved} players that haven't connected in the past 9 days and had less than 2 hours of playtime.`);
-        logOk(`- ${wlRequestsRemoved} whitelist requests older than a week.`);
-        logOk(`- ${wlApprovalsRemoved} whitelist approvals older than a week.`);
+        console.ok(`Internal Database optimized. This applies only for the txAdmin internal database, and does not affect your MySQL or framework (ESX/QBCore/etc) databases.`);
+        console.ok(`- ${playerRemoved} players that haven't connected in the past 16 days and had less than 2 hours of playtime.`);
+        console.ok(`- ${wlRequestsRemoved} whitelist requests older than a week.`);
+        console.ok(`- ${wlApprovalsRemoved} whitelist approvals older than a week.`);
     }
 };

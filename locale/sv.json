@@ -24,34 +24,35 @@
             "label_author": "Bannlyst av ",
             "label_reason": "Bannlysnings anledning",
             "label_id": "Bannlysnings ID",
-            "note_multiple_bans": "OBS Du kan vara bannlyst på flera identifikationer."
+            "note_multiple_bans": "OBS Du kan vara bannlyst på flera identifikationer.",
+            "note_diff_license": "Note: the ban above was applied for another <code>license</code>, which means some of your IDs/HWIDs match the ones associated with that ban."
         }
     },
     "whitelist_messages": {
         "admin_only": {
-            "mode_title": "This server is in <strong>Admin-only</strong> mode.",
-            "insufficient_ids": "You do not have <code>discord</code> or <code>fivem</code> identifiers, and at least one of them is required to validate if you are a txAdmin administrator.",
-            "deny_message": "Your identifiers are not assigned to any txAdmin administrator."
+            "mode_title": "Denna server är i <strong>Endast Admin</strong> läge.",
+            "insufficient_ids": "Du har inte en <code>discord</code> eller <code>fivem</code> identifikation, och minst en av dem är nödvändiga för att validera om du är en txAdmin administratör.",
+            "deny_message": "Dina identifikationer är inte tilldelade till något txAdmin administratörs konto."
         },
         "guild_member": {
-            "mode_title": "This server is in <strong>Discord Guild Member Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
-            "deny_title": "You are required to join our Discord Guild to connect.",
-            "deny_message": "Please join the guild %{guildname} then try again."
+            "mode_title": "Denna server har <strong>Discord Server Medlems Whitelist</strong>.",
+            "insufficient_ids": "Du har inte en <code>discord</code> identifikation, som är nödvändigt för att validera om du har gått med i våran Discord Server. Please open the Discord Desktop app and try again (the Web app won't work).",
+            "deny_title": "Du måste gå med i våran Discord Server för att kunna ansluta till servern.",
+            "deny_message": "Var vänlig gå med i %{guildname} och sedan försök igen."
         },
         "guild_roles": {
-            "mode_title": "This server is in <strong>Discord Role Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>discord</code> identifier, which is required to validate if you have joined our Discord Guild. Please open Discord and try again.",
-            "deny_notmember_title": "You are required to join our Discord Guild to connect.",
-            "deny_notmember_message": "Please join %{guildname}, get one of the required roles, then try again.",
-            "deny_noroles_title": "You do not have a whitelisted role required to join.",
-            "deny_noroles_message": "To join this server you are required to have at least one of the whitelisted roles on the guild %{guildname}."
+            "mode_title": "Denna servern har <strong>Discord Rolls Whitelist</strong>.",
+            "insufficient_ids": "Du har inte en <code>discord</code> identifikation, vilket är nödvändigt för att validera om du gått med i våran Discord Server. Please open the Discord Desktop app and try again (the Web app won't work).",
+            "deny_notmember_title": "Du måste gå med i våran Discord Server för att kunna ansluta till servern.",
+            "deny_notmember_message": "Var vänlig gå med i %{guildname}, och skaffa rollen som är nödvändig för att ansluta, sedan försök igen.",
+            "deny_noroles_title": "Du har inte rollen som krävs för att kun",
+            "deny_noroles_message": "För att kunna ansluta till denna servern måste du ha minst en av de roller som krävs i Discord servern %{guildname}."
         },
         "approved_license": {
-            "mode_title": "This server is in <strong>License Whitelist</strong> mode.",
-            "insufficient_ids": "You do not have the <code>license</code> identifier, which means the server has <code>sv_lan</code> enabled. If you are the server owner, you can disable it in the <code>server.cfg</code> file.",
-            "deny_title": "You are not whitelisted to join this server.",
-            "request_id_label": "Request ID"
+            "mode_title": "Denna servern har <strong>Licens Whitelist</strong> läge.",
+            "insufficient_ids": "Du har inte en <code>licens</code> identifikation, vilket betyder att servern har <code>sv_lan</code> påslaget. Om du är server ägaren kan du stänga av detta i <code>server.cfg</code> filen.",
+            "deny_title": "Du är inte whitelistad i denna server.",
+            "request_id_label": "Begärelse ID"
         }
     },
     "server_actions": {
@@ -69,7 +70,8 @@
     "nui_menu": {
         "misc": {
             "help_message": "txAdmin Menyn är aktiverad, skriv /tx i chatten för att öppna den.\nDu kan ändra knapp på [Game Settings > Key Bindings > FiveM > Menu: Open Main Page].",
-            "menu_not_allowed": "Dina id stämmer inte överns med dom som är registerade i txAdmin regisrtert.\nOm du är registerad på Txadmin,gå till administratör hanteraren och dubbelkolla att id:en är korrekta.",
+            "menu_not_admin": "Dina id stämmer inte överns med dom som är registerade i txAdmin regisrtert.\nOm du är registerad på Txadmin,gå till administratör hanteraren och dubbelkolla att id:en är korrekta.",
+            "menu_auth_failed": "txAdmin Menu authentication failed with reason: %{reason}",
             "no_perms": "Du har inte behörighet för detta.",
             "unknown_error": "Ett okänt problem har uppstått",
             "not_enabled": "Txadmin menyn är inte aktiverad! Du kan aktivera den på Txadmin panelen.",
@@ -169,7 +171,8 @@
                     "label": "Trimma bilen och nå maximalt nöje (och kanske hastighet)",
                     "success": "Vehicle boosted!",
                     "already_boosted": "This vehicle was already boosted.",
-                    "unsupported_class": "This vehicle class is not supported."
+                    "unsupported_class": "This vehicle class is not supported.",
+                    "redm_not_mounted": "You can only boost when mounted on a horse."
                 }
             },
             "heal": {
@@ -281,12 +284,13 @@
                         "toggle_freeze": "Växla frysläge"
                     },
                     "notifications": {
-                        "heal_player": "Läk spelare",
-                        "tp_player": "Teleporterna till spelare",
-                        "bring_player": "Ta spelare till dig",
+                        "heal_player": "Spelare är läkt",
+                        "tp_player": "Spelare teleporterad till dig",
+                        "bring_player": "Tog spelare till dig",
                         "spectate_failed": "Misslyckades att hitta spelaren, avslutar åskådarläget.",
                         "spectate_yourself": "Du kan inte åskåda dig själv.",
-                        "freeze_yourself": "Du kan inte frysa dig själv."
+                        "freeze_yourself": "Du kan inte frysa dig själv.",
+                        "spectate_cycle_failed": "Där finns inga spelare att gå mellan."
                     }
                 },
                 "troll": {
@@ -343,7 +347,8 @@
             },
             "ids": {
                 "current_ids": "Nuvarande identifikationer",
-                "previous_ids": "Tidigare använda identifikationer"
+                "previous_ids": "Tidigare använda identifikationer",
+                "all_hwids": "All Hardware IDs"
             }
         }
     }

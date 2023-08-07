@@ -1,13 +1,15 @@
 const modulename = 'AdminVault';
 import fse from 'fs-extra';
+import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import { cloneDeep } from 'lodash-es';
 import { nanoid } from 'nanoid';
-import logger from '@core/extras/console.js';
-import { convars, txEnv, verbose } from '@core/globalData';
+import { convars, txEnv } from '@core/globalData';
 import CitizenFXProvider from './providers/CitizenFX.js';
 import { createHash } from 'node:crypto';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
+
 
 //Helpers
 const migrateProviderIdentifiers = (providerName, providerData) => {
@@ -31,7 +33,6 @@ export default class AdminVault {
         this.adminsFileHash = null;
         this.admins = null;
         this.refreshRoutine = null;
-        this.lastAdminFile = '';
 
         //Not alphabetical order, but that's fine
         this.registeredPermissions = {
@@ -79,9 +80,14 @@ export default class AdminVault {
         //Check if admins file exists
         let adminFileExists;
         try {
-            adminFileExists = fse.existsSync(this.adminsFile);
+            fs.statSync(this.adminsFile, fs.constants.F_OK);
+            adminFileExists = true;
         } catch (error) {
-            throw new Error(`Failed to check presence of admin file with error: ${error.message}`);
+            if (error.code === 'ENOENT') {
+                adminFileExists = false;
+            } else {
+                throw new Error(`Failed to check presence of admin file with error: ${error.message}`);
+            }
         }
 
         //Printing PIN or starting loop
@@ -90,7 +96,7 @@ export default class AdminVault {
                 this.addMasterPin = (Math.random() * 10000).toFixed().padStart(4, '0');
                 this.admins = false;
             } else {
-                log(`Setting up master account '${convars.defaultMasterAccount.name}'. The password is the same as in zap-hosting.com.`);
+                console.log(`Setting up master account '${convars.defaultMasterAccount.name}'. The password is the same as in zap-hosting.com.`);
                 this.createAdminsFile(convars.defaultMasterAccount.name, false, false, convars.defaultMasterAccount.password_hash, false);
             }
         } else {
@@ -151,7 +157,7 @@ export default class AdminVault {
             return true;
         } catch (error) {
             let message = `Failed to create '${this.adminsFile}' with error: ${error.message}`;
-            if (verbose) logError(message);
+            console.verbose.error(message);
             throw new Error(message);
         }
     }
@@ -258,21 +264,21 @@ export default class AdminVault {
         const restore = async () => {
             try {
                 await this.writeAdminsFile();
-                logOk('Restored admins.json file.');
+                console.ok('Restored admins.json file.');
             } catch (error) {
-                logError(`Failed to restore admins.json file: ${error.message}`);
-                if (verbose) dir(error);
+                console.error(`Failed to restore admins.json file: ${error.message}`);
+                console.verbose.dir(error);
             }
-        }
+        };
         try {
             const jsonData = await fse.readFile(this.adminsFile, 'utf8');
             const inboundHash = createHash('sha1').update(jsonData).digest('hex');
             if (this.adminsFileHash !== inboundHash) {
-                logWarn('The admins.json file was modified or deleted by an external source, txAdmin will try to restore it.');
+                console.warn('The admins.json file was modified or deleted by an external source, txAdmin will try to restore it.');
                 restore();
             }
         } catch (error) {
-            logError(`Cannot check admins file integrity: ${error.message}`);
+            console.error(`Cannot check admins file integrity: ${error.message}`);
             restore();
         }
     }
@@ -325,7 +331,7 @@ export default class AdminVault {
 
         //Saving admin file
         this.admins.push(admin);
-        this.refreshOnlineAdmins().catch((e) => { });
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             return await this.writeAdminsFile();
         } catch (error) {
@@ -382,7 +388,7 @@ export default class AdminVault {
         if (typeof permissions !== 'undefined') this.admins[adminIndex].permissions = permissions;
 
         //Saving admin file
-        this.refreshOnlineAdmins().catch((e) => { });
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             await this.writeAdminsFile();
             return (password !== null) ? this.admins[adminIndex].password_hash : true;
@@ -394,6 +400,8 @@ export default class AdminVault {
 
     /**
      * Refreshes admin's social login data
+     * TODO: this should be stored on PersistentCache instead of admins.json
+     *       otherwise it refreshes the admins connected
      * @param {string} name
      * @param {string} provider
      * @param {string} identifier
@@ -415,7 +423,7 @@ export default class AdminVault {
         this.admins[adminIndex].providers[provider].data = providerData;
 
         //Saving admin file
-        this.refreshOnlineAdmins().catch((e) => { });
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             return await this.writeAdminsFile();
         } catch (error) {
@@ -445,7 +453,7 @@ export default class AdminVault {
         if (!found) throw new Error('Admin not found');
 
         //Saving admin file
-        this.refreshOnlineAdmins().catch((e) => { });
+        this.refreshOnlineAdmins().catch((e) => {});
         try {
             return await this.writeAdminsFile();
         } catch (error) {
@@ -463,21 +471,27 @@ export default class AdminVault {
         let jsonData = null;
         let migrated = false;
 
-        const callError = (x) => {
-            logError(`Unable to load admins. (${x}, please read the documentation)`);
+        const callError = (reason) => {
+            console.error(`Unable to load admins.json: ${reason}`);
+            if (reason === 'cannot read file') {
+                console.error('This means the file  doesn\'t exist or txAdmin doesn\'t have permission to read it.');
+            } else {
+                console.error('This likely means the file got somehow corrupted.');
+                console.error('You can rey restoring it or you can delete it and let txAdmin create a new one.');
+            }
+            console.error(`Admin File Path: ${this.adminsFile}`);
             process.exit(1);
         };
 
         try {
             raw = await fsp.readFile(this.adminsFile, 'utf8');
             this.adminsFileHash = createHash('sha1').update(raw).digest('hex');
-            if (raw === this.lastAdminFile) {
-                if (verbose) log('Admin file didn\'t change, skipping.');
-                return;
-            }
-            this.lastAdminFile = raw;
         } catch (error) {
             return callError('cannot read file');
+        }
+
+        if (!raw.length) {
+            return callError('empty file');
         }
 
         try {
@@ -488,6 +502,10 @@ export default class AdminVault {
 
         if (!Array.isArray(jsonData)) {
             return callError('not an array');
+        }
+
+        if (!jsonData.length) {
+            return callError('no admins');
         }
 
         const structureIntegrityTest = jsonData.some((x) => {
@@ -519,18 +537,14 @@ export default class AdminVault {
             return callError('must have exactly 1 master account');
         }
 
-        if (!jsonData.length) {
-            return callError('no entries');
-        }
-
         this.admins = jsonData;
-        this.refreshOnlineAdmins().catch((e) => { });
+        this.refreshOnlineAdmins().catch((e) => {});
         if (migrated) {
             try {
                 await this.writeAdminsFile();
-                logOk('The admins.json file was migrated to a new version.');
+                console.ok('The admins.json file was migrated to a new version.');
             } catch (error) {
-                logError(`Failed to migrate admins.json with error: ${error.message}`);
+                console.error(`Failed to migrate admins.json with error: ${error.message}`);
             }
         }
 
@@ -559,10 +573,8 @@ export default class AdminVault {
 
             return globals.fxRunner.sendEvent('adminsUpdated', onlineIDs);
         } catch (error) {
-            if (verbose) {
-                logError('Failed to refreshOnlineAdmins() with error:');
-                dir(error);
-            }
+            console.verbose.error('Failed to refreshOnlineAdmins() with error:');
+            console.verbose.dir(error);
         }
     }
 

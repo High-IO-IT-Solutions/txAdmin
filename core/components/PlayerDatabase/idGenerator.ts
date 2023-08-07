@@ -1,14 +1,14 @@
 const modulename = 'IDGen';
 import fsp from 'node:fs/promises';
-import humanizeDuration from 'humanize-duration';
+import humanizeDuration, { HumanizerOptions } from 'humanize-duration';
 import * as nanoidSecure from 'nanoid';
 import * as nanoidNonSecure from 'nanoid/non-secure';
 import consts from '@core/extras/consts';
-import logger from '@core/extras/console.js';
 import getOsDistro from '@core/extras/getOsDistro.js';
 import { convars, txEnv } from '@core/globalData';
 import { DatabaseObjectType } from './database';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Consts
 type IdStorageTypes = DatabaseObjectType | Set<string>;
@@ -20,7 +20,7 @@ const noIdErrorMessage = 'Unnable to generate new Random ID possibly due to the 
  * Prints a diagnostics message to the console that should help us identify what is the problem and the potential solution
  */
 const printDiagnostics = async () => {
-    const humanizeOptions = {
+    const humanizeOptions: HumanizerOptions = {
         round: true,
         units: ['d', 'h', 'm'],
     };
@@ -46,14 +46,15 @@ const printDiagnostics = async () => {
     }
 
     const osDistro = await getOsDistro();
-    logError(noIdErrorMessage);
-    logError(`Uptime: ${uptime}`);
-    logError(`Entropy: ${entropy}`);
-    logError(`Distro: ${osDistro}`);
-    logError(`txAdmin: ${txEnv.txAdminVersion}`);
-    logError(`FXServer: ${txEnv.fxServerVersion}`);
-    logError(`ZAP: ${convars.isZapHosting}`);
-    logError(`Unique Test: secure ${secureStorage.size}/100, non-secure ${nonsecureStorage.size}/100`);
+    console.error(noIdErrorMessage);
+    console.error(`Uptime: ${uptime}`);
+    console.error(`Entropy: ${entropy}`);
+    console.error(`Distro: ${osDistro}`);
+    console.error(`txAdmin: ${txEnv.txAdminVersion}`);
+    console.error(`FXServer: ${txEnv.fxServerVersion}`);
+    console.error(`ZAP: ${convars.isZapHosting}`);
+    console.error(`Pterodactyl: ${convars.isPterodactyl}`);
+    console.error(`Unique Test: secure ${secureStorage.size}/100, non-secure ${nonsecureStorage.size}/100`);
 };
 
 /**
@@ -80,7 +81,6 @@ export const genWhitelistRequestID = (storage: IdStorageTypes) => {
     let attempts = 0;
     while (attempts < maxAttempts) {
         attempts++;
-        if (attempts > 5) globals.databus.txStatsData.randIDFailures++;
         const randFunc = (attempts <= 5) ? nanoidSecure : nanoidNonSecure;
         const id = 'R' + randFunc.customAlphabet(consts.noLookAlikesAlphabet, 4)();
         if (checkUniqueness(storage, id, 'whitelistRequests')) {
@@ -88,7 +88,7 @@ export const genWhitelistRequestID = (storage: IdStorageTypes) => {
         }
     }
 
-    printDiagnostics().catch();
+    printDiagnostics().catch((e) => {});
     throw new Error(noIdErrorMessage);
 };
 
@@ -99,7 +99,6 @@ export const genActionID = (storage: IdStorageTypes, actionType: string) => {
     let attempts = 0;
     while (attempts < maxAttempts) {
         attempts++;
-        if (attempts > 5) globals.databus.txStatsData.randIDFailures++;
         const randFunc = (attempts <= 5) ? nanoidSecure : nanoidNonSecure;
         const id = actionType[0].toUpperCase()
             + randFunc.customAlphabet(consts.noLookAlikesAlphabet, 3)()
@@ -110,6 +109,6 @@ export const genActionID = (storage: IdStorageTypes, actionType: string) => {
         }
     }
 
-    printDiagnostics().catch();
+    printDiagnostics().catch((e) => {});
     throw new Error(noIdErrorMessage);
 };

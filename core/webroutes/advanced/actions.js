@@ -2,9 +2,8 @@ const modulename = 'WebServer:AdvancedActions';
 import bytes from 'bytes';
 import humanizeDuration from 'humanize-duration';
 import got from '@core/extras/got.js';
-import logger, { ogConsole } from '@core/extras/console.js';
-import { setVerbose } from '@core/globalData';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
@@ -21,7 +20,7 @@ export default async function AdvancedActions(ctx) {
         isUndefined(ctx.request.body.action)
         || isUndefined(ctx.request.body.parameter)
     ) {
-        logWarn('Invalid request!');
+        console.warn('Invalid request!');
         return ctx.send({ type: 'danger', message: '<strong>Invalid request :(</strong>' });
     }
     const action = ctx.request.body.action;
@@ -38,7 +37,7 @@ export default async function AdvancedActions(ctx) {
 
     //Action: Change Verbosity
     if (action == 'change_verbosity') {
-        setVerbose(parameter == 'true');
+        console.setVerbose(parameter == 'true');
         globals.fxRunner.resetConvars();
         return ctx.send({ refresh: true });
     } else if (action == 'perform_magic') {
@@ -46,7 +45,7 @@ export default async function AdvancedActions(ctx) {
         return ctx.send({ type: 'success', message });
     } else if (action == 'show_db') {
         const dbo = globals.playerDatabase.getDb();
-        dir(dbo);
+        console.dir(dbo);
         return ctx.send({ type: 'success', message: JSON.stringify(dbo, null, 2) });
     } else if (action == 'show_log') {
         return ctx.send({ type: 'success', message: JSON.stringify(globals.logger.server.getRecentBuffer(), null, 2) });
@@ -62,24 +61,8 @@ export default async function AdvancedActions(ctx) {
             memory = 'error';
         }
         return ctx.send({ type: 'success', message: memory });
-    } else if (action == 'joinCheckHistory') {
-        let outData;
-        try {
-            const currTime = Date.now();
-            const log = globals.databus.joinCheckHistory.map((e) => {
-                return {
-                    when: humanizeDuration(currTime - e.ts, { round: true }),
-                    playerName: e.playerName,
-                    idArray: e.idArray,
-                };
-            });
-            outData = JSON.stringify(log, null, 2);
-        } catch (error) {
-            outData = error.message;
-        }
-        return ctx.send({ type: 'success', message: outData });
     } else if (action == 'freeze') {
-        logWarn('Freezing process for 50 seconds.');
+        console.warn('Freezing process for 50 seconds.');
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50 * 1000);
     } else if (action == 'resetConvars') {
         globals.fxRunner.resetConvars();
@@ -106,25 +89,12 @@ export default async function AdvancedActions(ctx) {
         return ctx.send({ type: 'success', message: JSON.stringify(outData, null, 2) });
     } else if (action == 'getProcessEnv') {
         return ctx.send({ type: 'success', message: JSON.stringify(process.env, null, 2) });
-    } else if (action == 'remove-all-identifiers-except-first-license-from-bans-and-warns-that-happened-after-v5-beta1') {
-        //FIXME: temp - remove after beta expires
-        const dbo = globals.playerDatabase.getDb();
-        const cnt = {
-            ban: 0,
-            warn: 0,
-        }
-        dbo.data.actions.forEach((action) => {
-            //beta1 commit && beta1 + 3w
-            if (action.timestamp > 1668575245 && action.timestamp < 1670402658){
-                action.identifiers = [action.identifiers[0]];
-                cnt[action.type]++;
-            }
-        });
-        
-        return ctx.send({ type: 'success', message: JSON.stringify(cnt, null, 2) });
+    } else if (action == 'setHbDataTracking') {
+        globals.tmpSetHbDataTracking = true;
+        return ctx.send({ type: 'success', message: 'done' });
     } else if (action == 'xxxxxx') {
         // const res = globals.playerDatabase.xxxxx();
-        // ogConsole.dir(res);
+        // console.dir(res);
         return ctx.send({ type: 'success', message: 'terminal' });
     }
 

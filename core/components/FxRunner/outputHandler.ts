@@ -1,16 +1,26 @@
 const modulename = 'OutputHandler';
-import logger from '@core/extras/console.js';
 import { anyUndefined } from '@core/extras/helpers';
-import { verbose } from '@core/globalData';
 import TxAdmin from '@core/txAdmin';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helpers
 const deferError = (m: string, t = 500) => {
     setTimeout(() => {
-        logError(m);
+        console.error(m);
     }, t);
 };
+
+type StructuredTraceType = {
+    key: number;
+    value: {
+        channel: string;
+        data: any;
+        file: string;
+        func: string;
+        line: number;
+    }
+}
 
 
 /**
@@ -36,19 +46,15 @@ export default class OutputHandler {
      *   script_log
      *   script_structured_trace (handled by server logger)
      */
-    trace(mutex: string, trace: object) {
+    trace(mutex: string, trace: StructuredTraceType) {
         try {
             //Filter valid and fresh packages
             if (mutex !== this.#txAdmin.fxRunner.currentMutex) return;
-            // const json = JSON.stringify(trace);
-            // if (json.includes('mapmanager')) {
-            //     dir(trace);
-            // }
             if (anyUndefined(trace, trace.value, trace.value.data, trace.value.channel)) return;
             const { channel, data } = trace.value;
 
             //Handle bind errors
-            if (channel == 'citizen-server-impl' && data.type == 'bind_error') {
+            if (channel == 'citizen-server-impl' && data?.type == 'bind_error') {
                 try {
                     if (!this.#txAdmin.fxRunner.restartDelayOverride) {
                         this.#txAdmin.fxRunner.restartDelayOverride = 10000;
@@ -64,7 +70,7 @@ export default class OutputHandler {
             //Handle bind errors
             if (channel == 'citizen-server-impl' && data.type == 'nucleus_connected') {
                 if (typeof data.url !== 'string') {
-                    logError(`FD3 nucleus_connected event without URL.`);
+                    console.error(`FD3 nucleus_connected event without URL.`);
                 } else {
                     try {
                         const matches = /^(https:\/\/)?.*-([0-9a-z]{6,})\.users\.cfx\.re\/?$/.exec(data.url);
@@ -72,7 +78,7 @@ export default class OutputHandler {
                         this.#txAdmin.fxRunner.cfxId = matches[2];
                         this.#txAdmin.persistentCache.set('fxsRuntime:cfxId', matches[2]);
                     } catch (error) {
-                        logError(`Error decoding server nucleus URL.`);
+                        console.error(`Error decoding server nucleus URL.`);
                     }
                 }
                 return;
@@ -102,15 +108,56 @@ export default class OutputHandler {
                     this.#txAdmin.resourcesManager.handleServerEvents(data.payload, mutex);
                 } else if (data.payload.type === 'txAdminPlayerlistEvent') {
                     this.#txAdmin.playerlistManager.handleServerEvents(data.payload, mutex);
+                } else if (data.payload.type === 'txAdminCommandBridge') {
+                    this.bridgeCommand(data.payload);
                 }
             }
         } catch (error) {
-            if (verbose) {
-                logError('Error processing FD3 stream output:');
-                dir(error);
-            }
+            console.verbose.error('Error processing FD3 stream output:');
+            console.verbose.dir(error);
         }
     }
+
+
+    /**
+     * handles stdout and stderr from child fxserver and send to be processed by the logger
+     * TODO: use zod for type safety
+     */
+    bridgeCommand(payload: any) {
+        if (payload.command === 'announcement') {
+            try {
+                //Validate input
+                if (typeof payload.author !== 'string') throw new Error(`invalid author`);
+                if (typeof payload.message !== 'string') throw new Error(`invalid message`);
+                const message = (payload.message ?? '').trim();
+                if (!message.length) throw new Error(`empty message`);
+
+                //Resolve admin
+                const author = payload.author;
+                this.#txAdmin.logger.admin.write(author, `Sending announcement: ${message}`);
+
+                // Dispatch `txAdmin:events:announcement`
+                this.#txAdmin.fxRunner.sendEvent('announcement', { message, author });
+
+                // Sending discord announcement
+                this.#txAdmin.discordBot.sendAnnouncement({
+                    type: 'info',
+                    title: {
+                        key: 'nui_menu.misc.announcement_title',
+                        data: { author }
+                    },
+                    description: message
+                });
+            } catch (error) {
+                console.verbose.warn(`bridgeCommand handler error:`);
+                console.verbose.dir(error);
+            }
+        } else {
+            console.warn(`Command bridge received invalid command:`);
+            console.dir(payload);
+        }
+    }
+
 
     /**
      * handles stdout and stderr from child fxserver and send to be processed by the logger

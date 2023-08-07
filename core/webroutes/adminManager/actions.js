@@ -3,18 +3,20 @@ import { customAlphabet } from 'nanoid';
 import dict51 from 'nanoid-dictionary/nolookalikes'
 import got from '@core/extras/got.js';
 import consts from '@core/extras/consts';
-import logger from '@core/extras/console.js';
-const { dir, log, logOk, logWarn, logError } = logger(modulename);
+import consoleFactory from '@extras/console';
+const console = consoleFactory(modulename);
 
 //Helper functions
 const nanoid = customAlphabet(dict51, 20);
 const isUndefined = (x) => { return (typeof x === 'undefined'); };
 const citizenfxIDRegex = /^\w[\w.-]{1,18}\w$/;
-const discordIDRegex = /^\d{7,20}$/;
+const discordIDRegex = /^\d{17,20}$/;
 const nameRegex = citizenfxIDRegex;
 const nameRegexDesc = 'up to 18 characters containing only letters, numbers and the characters \`_.-\`';
 const dangerousPerms = ['all_permissions', 'manage.admins', 'console.write', 'settings.write'];
-
+const cfxHttpReqOptions = {
+    timeout: { request: 6000 }
+}
 
 /**
  * Returns the output page containing the admins.
@@ -87,7 +89,7 @@ async function handleAdd(ctx) {
         try {
             if (consts.validIdentifiers.fivem.test(citizenfxID)) {
                 const id = citizenfxID.split(':')[1];
-                const res = await got(`https://policy-live.fivem.net/api/getUserInfo/${id}`, {timeout: 6000}).json();
+                const res = await got(`https://policy-live.fivem.net/api/getUserInfo/${id}`, cfxHttpReqOptions).json();
                 if (!res.username || !res.username.length) {
                     return ctx.send({type: 'danger', message: 'Invalid CitizenFX ID1'});
                 }
@@ -96,7 +98,7 @@ async function handleAdd(ctx) {
                     identifier: citizenfxID,
                 };
             } else if (citizenfxIDRegex.test(citizenfxID)) {
-                const res = await got(`https://forum.cfx.re/u/${citizenfxID}.json`, {timeout: 6000}).json();
+                const res = await got(`https://forum.cfx.re/u/${citizenfxID}.json`, cfxHttpReqOptions).json();
                 if (!res.user || typeof res.user.id !== 'number') {
                     return ctx.send({type: 'danger', message: 'Invalid CitizenFX ID2'});
                 }
@@ -108,7 +110,7 @@ async function handleAdd(ctx) {
                 return ctx.send({type: 'danger', message: 'Invalid CitizenFX ID3'});
             }
         } catch (error) {
-            logError(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
+            console.error(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
         }
     }
 
@@ -182,7 +184,7 @@ async function handleEdit(ctx) {
         try {
             if (consts.validIdentifiers.fivem.test(citizenfxID)) {
                 const id = citizenfxID.split(':')[1];
-                const res = await got(`https://policy-live.fivem.net/api/getUserInfo/${id}`, {timeout: 6000}).json();
+                const res = await got(`https://policy-live.fivem.net/api/getUserInfo/${id}`, cfxHttpReqOptions).json();
                 if (!res.username || !res.username.length) {
                     return ctx.send({type: 'danger', message: '(ERR1) Invalid CitizenFX ID'});
                 }
@@ -191,7 +193,7 @@ async function handleEdit(ctx) {
                     identifier: citizenfxID,
                 };
             } else if (citizenfxIDRegex.test(citizenfxID)) {
-                const res = await got(`https://forum.cfx.re/u/${citizenfxID}.json`, {timeout: 6000}).json();
+                const res = await got(`https://forum.cfx.re/u/${citizenfxID}.json`, cfxHttpReqOptions).json();
                 if (!res.user || typeof res.user.id !== 'number') {
                     return ctx.send({type: 'danger', message: '(ERR2) Invalid CitizenFX ID'});
                 }
@@ -203,7 +205,7 @@ async function handleEdit(ctx) {
                 return ctx.send({type: 'danger', message: '(ERR3) Invalid CitizenFX ID'});
             }
         } catch (error) {
-            logError(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
+            console.error(`Failed to resolve CitizenFX ID to game identifier with error: ${error.message}`);
         }
     }
 
