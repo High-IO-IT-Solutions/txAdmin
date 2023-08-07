@@ -172,6 +172,8 @@ const updatePageTitle = (serverStatusClass, serverName, playerCount) => {
 };
 
 const updateHostStats = (hostData) => {
+    return;
+
     if(!isWebInterface) return;
     
     $('#hostusage-cpu-bar').attr('aria-valuenow', hostData.cpu.pct).css('width', hostData.cpu.pct + '%');
@@ -326,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function (event) {
     // setInterval(refreshData, STATUS_REFRESH_INTERVAL);
 
     //Starting status/playerlist socket.io
+    initWebSocket(); // nmbr.one
     startMainSocket();
 
     //Opening modal
