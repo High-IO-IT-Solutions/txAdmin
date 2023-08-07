@@ -1,24 +1,19 @@
 import boxen from 'boxen';
 import chalk from 'chalk';
 import open from 'open';
-
 import fs from "fs";
+
 import got from '@core/extras/got.js';
 import getOsDistro from '@core/extras/getOsDistro.js';
-import logger from '@core/extras/console.js';
 import { convars, txEnv } from '@core/globalData';
-const { dir, log, logOk, logWarn, logError } = logger();
+import consoleFactory from '@extras/console';
+const console = consoleFactory();
 
-
-const printMultiline = (lines, color) => {
-    const prefix = color('[txAdmin]');
-    if (!Array.isArray(lines)) lines = lines.split('\n');
-    const message = lines.map((line) => `${prefix} ${line}`);
-    console.log(message.join('\n'));
-};
 
 const getIPs = async () => {
-    const reqOptions = { timeout: 2500 };
+    const reqOptions = {
+        timeout: { request: 2500 }
+    };
     const allOps = await Promise.allSettled([
         // op.value.ip
         got('https://ip.seeip.org/json', reqOptions).json(),
@@ -69,7 +64,7 @@ const awaitHttp = new Promise((resolve, reject) => {
             clearInterval(interval);
             interval = setInterval(check, 2500);
         } else if (counter > tickLimit) {
-            logWarn('The WebServer is taking too long to start.');
+            console.warn('The WebServer is taking too long to start.');
         }
     };
     interval = setInterval(check, 150);
@@ -89,7 +84,7 @@ const awaitMasterPin = new Promise((resolve, reject) => {
             clearInterval(interval);
             interval = setInterval(check, 2500);
         } else if (counter > tickLimit) {
-            logWarn('The AdminVault is taking too long to start.');
+            console.warn('The AdminVault is taking too long to start.');
         }
     };
     interval = setInterval(check, 150);
@@ -108,7 +103,7 @@ const awaitDatabase = new Promise((resolve, reject) => {
             clearInterval(interval);
             interval = setInterval(check, 2500);
         } else if (counter > tickLimit) {
-            logWarn('The PlayerDatabase is taking too long to start.');
+            console.warn('The PlayerDatabase is taking too long to start.');
         }
     };
     interval = setInterval(check, 150);
@@ -156,21 +151,21 @@ export const printBanner = async () => {
         borderColor: 'cyan',
     };
     const url = fs.readFileSync(
-      path.join(txEnv.txAdminResourcePath, "txadmin_url.txt")
-    );
+        path.join(txEnv.txAdminResourcePath, "txadmin_url.txt")
+      );
     const boxLines = [
         'All ready! Please access:',
         chalk.inverse(" " + url + " "),
         ...adminPinLines,
     ];
-    printMultiline(boxen(boxLines.join('\n'), boxOptions), chalk.bold.bgGreen);
+    console.multiline(boxen(boxLines.join('\n'), boxOptions), chalk.bgGreen);
     if (convars.forceInterface === false) {
-        printMultiline(msgRes.value, chalk.bold.bgBlue);
+        console.multiline(msgRes.value, chalk.bgBlue);
     }
 
     //Opening page
     if (txEnv.isWindows && adminPinRes.value) {
-        open(`http://localhost:${convars.txAdminPort}/auth#${adminPinRes.value}`).catch();
+        open(`http://localhost:${convars.txAdminPort}/auth#${adminPinRes.value}`).catch((e) => {});
     }
 
     //Starting server
